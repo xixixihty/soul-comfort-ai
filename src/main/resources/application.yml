@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: SoulComfortAI
+  profiles:
+    active: local
+
+langchain4j:
+  community:
+    dashscope:
+      chat-model:
+        model-name: qwen-max
+        api-key: ${ai.open.api-key}
+      embedding-model:
+        model-name: text-embedding-v4
+        api-key: ${ai.open.api-key}
+      streaming-chat-model:
+        model-name: qwen-max
+        api-key: ${ai.open.api-key}
+bigmodel:
+  api-key: ${bigmodel.api-key}
+server:
+  port: 8081
+  servlet:
+    context-path: /api

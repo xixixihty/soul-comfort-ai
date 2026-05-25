@@ -1,0 +1,30 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  background: #faf5ed;
+  color: #4a3728;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+}
+
+.el-button--primary {
+  --el-button-bg-color: #d4a373;
+  --el-button-border-color: #d4a373;
+  --el-button-hover-bg-color: #c98d5a;
+  --el-button-hover-border-color: #c98d5a;
+  --el-button-active-bg-color: #b87d4a;
+  --el-button-active-border-color: #b87d4a;
+}
+
+.el-button.is-disabled {
+  opacity: 0.5;
+}
