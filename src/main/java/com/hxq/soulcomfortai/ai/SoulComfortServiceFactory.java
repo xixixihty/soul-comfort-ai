@@ -1,5 +1,6 @@
 package com.hxq.soulcomfortai.ai;
 
+import com.hxq.soulcomfortai.store.RedisChatMemoryStore;
 import com.hxq.soulcomfortai.tools.SoulConformTools;
 import dev.langchain4j.mcp.McpToolProvider;
 import dev.langchain4j.memory.ChatMemory;
@@ -24,18 +25,28 @@ public class SoulComfortServiceFactory {
     private McpToolProvider mcpToolProvider;
     @Resource
     private StreamingChatModel qwenStreamingChatModel;
+    @Resource
+    private RedisChatMemoryStore redisChatMemoryStore;
 
     @Bean
     public SoulComfortService createSoulComfortService() {
-        ChatMemory chatMemory = MessageWindowChatMemory.withMaxMessages(10);
+        ChatMemory chatMemory = MessageWindowChatMemory.builder()
+                .chatMemoryStore(redisChatMemoryStore)
+                .maxMessages(10)
+                .build();
+
         SoulComfortService soulComfortService = AiServices.builder(SoulComfortService.class)
                 .chatModel(myQwenChatModel)
                 .streamingChatModel(qwenStreamingChatModel)
                 .chatMemory(chatMemory)
-                .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(10))
+                .chatMemoryProvider(memoryId -> MessageWindowChatMemory.builder()
+                        .chatMemoryStore(redisChatMemoryStore)
+                        .id(memoryId)
+                        .maxMessages(10)
+                        .build())
                 .contentRetriever(contentRetriever)
-                .tools(new SoulConformTools())  // 工具调用
-                .toolProvider(mcpToolProvider)  // MCP 工具调用
+                .tools(new SoulConformTools())
+                .toolProvider(mcpToolProvider)
                 .build();
         return soulComfortService;
     }

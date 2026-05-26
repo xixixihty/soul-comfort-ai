@@ -18,14 +18,13 @@ public class McpConfig {
     public McpToolProvider mcpTooLProvider() {
         McpTransport transport = new HttpMcpTransport.Builder()
                 .sseUrl("https://open.bigmodel.cn/api/mcp/web_search/sse?Authorization=" + apiKey)
-                .logRequests(true)
-                .logResponses(true).build();
-        // 创建 MCP客户端
+                .logRequests(false)
+                .logResponses(false)
+                .build();
         McpClient mcpClient = new DefaultMcpClient.Builder()
                 .key("yupiMcpclient")
                 .transport(transport)
                 .build();
-        //从MCP客户端获取工具
         McpToolProvider tooLProvider = McpToolProvider
                 .builder()
                 .mcpClients(mcpClient)

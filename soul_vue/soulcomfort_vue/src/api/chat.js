@@ -1,7 +1,7 @@
 const API_BASE = '/api'
 
-export async function* streamChat(memoryId, message) {
-  const url = `${API_BASE}/soulComfort/chat?memoryId=${memoryId}&message=${encodeURIComponent(message)}`
+export async function* streamChat(convId, message, userId = 'default_user') {
+  const url = `${API_BASE}/soulComfort/chat?convId=${encodeURIComponent(convId)}&userId=${encodeURIComponent(userId)}&message=${encodeURIComponent(message)}`
 
   const response = await fetch(url)
 
