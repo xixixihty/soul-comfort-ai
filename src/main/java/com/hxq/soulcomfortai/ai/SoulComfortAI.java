@@ -26,14 +26,14 @@ public class SoulComfortAI {
         UserMessage userMessage = UserMessage.from(message);
         ChatResponse chat = qwenChatModel.chat(systemMessage, userMessage);
         AiMessage aiMessage = chat.aiMessage();
-        log.info("AI 输出" + aiMessage.toString());
+        log.debug("AI 响应完成 length={}", aiMessage.text().length());
         return aiMessage.text();
     }
 
     public String chatWithMessage(UserMessage userMessage) {
         ChatResponse chat = qwenChatModel.chat(userMessage);
         AiMessage aiMessage = chat.aiMessage();
-        log.info("AI 输出" + aiMessage.toString());
+        log.debug("AI 响应完成 length={}", aiMessage.text().length());
         return aiMessage.text();
     }
 }

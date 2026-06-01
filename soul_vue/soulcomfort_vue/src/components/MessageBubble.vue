@@ -9,10 +9,12 @@
       </el-avatar>
     </div>
     <div class="content-area">
-      <div class="sender-name">{{ role === 'user' ? '我' : '甜弈' }}</div>
-      <div class="bubble-text" v-html="renderedContent"></div>
-      <div v-if="role === 'assistant' && isStreaming" class="typing-indicator">
-        <span></span><span></span><span></span>
+      <div class="sender-name">{{ role === 'user' ? userName : '甜弈' }}</div>
+      <div class="bubble-text" :class="{ 'bubble-text--streaming': role === 'assistant' && isStreaming }">
+        <span v-html="renderedContent"></span>
+        <div v-if="role === 'assistant' && isStreaming" class="typing-indicator">
+          <span></span><span></span><span></span>
+        </div>
       </div>
     </div>
   </div>
@@ -34,6 +36,10 @@ const props = defineProps({
   isStreaming: {
     type: Boolean,
     default: false
+  },
+  userName: {
+    type: String,
+    default: '我'
   }
 })
 
@@ -93,6 +99,12 @@ const renderedContent = computed(() => {
   line-height: 1.7;
   word-break: break-word;
   white-space: pre-wrap;
+  position: relative;
+  min-height: 20px;
+}
+
+.bubble-text--streaming {
+  padding-right: 50px;
 }
 
 .message-bubble.user .bubble-text {
@@ -109,9 +121,13 @@ const renderedContent = computed(() => {
 }
 
 .typing-indicator {
-  display: flex;
+  display: inline-flex;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 0;
+  position: absolute;
+  right: 14px;
+  bottom: 10px;
+  align-items: center;
 }
 
 .typing-indicator span {

@@ -1,5 +1,6 @@
 <template>
-  <div class="app-layout">
+  <router-view v-if="$route.meta.guest" />
+  <div v-else class="app-layout">
     <aside class="sidebar">
       <div class="sidebar-logo">
         <el-icon :size="28" color="#d4a373"><StarFilled /></el-icon>
@@ -22,7 +23,20 @@
       </nav>
 
       <div class="sidebar-footer">
-        <span class="footer-text">SoulComfort AI</span>
+        <div class="sidebar-user" v-if="authStore.isLoggedIn">
+          <el-icon :size="16"><UserFilled /></el-icon>
+          <span class="user-nickname">{{ authStore.nickname }}</span>
+          <el-button
+            :icon="SwitchButton"
+            circle
+            text
+            size="small"
+            class="logout-btn"
+            @click="handleLogout"
+            title="退出登录"
+          />
+        </div>
+        <span v-else class="footer-text">SoulComfort AI</span>
       </div>
     </aside>
 
@@ -33,7 +47,22 @@
 </template>
 
 <script setup>
-import { StarFilled, ChatDotRound, List, Notebook } from '@element-plus/icons-vue'
+import { StarFilled, ChatDotRound, List, Notebook, UserFilled, SwitchButton } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
+import { useAuthStore } from './stores/auth'
+
+const authStore = useAuthStore()
+
+async function handleLogout() {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info'
+    })
+    authStore.logout()
+  } catch {}
+}
 </script>
 
 <style scoped>
@@ -98,17 +127,42 @@ import { StarFilled, ChatDotRound, List, Notebook } from '@element-plus/icons-vu
 }
 
 .sidebar-footer {
-  padding: 16px 20px;
+  padding: 16px;
   border-top: 1px solid #f0e6dc;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b6b5a;
+}
+
+.user-nickname {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  color: #c8b8a8;
+}
+
+.logout-btn:hover {
+  color: #e88b7a;
 }
 
 .footer-text {
   font-size: 12px;
-  color: #c4a882;
+  color: #c8b8a8;
 }
 
 .main-content {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

@@ -1,37 +1,68 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import ChatView from '../views/ChatView.vue'
 
 const routes = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { guest: true, title: '登录 - 甜弈' }
+  },
+  {
     path: '/',
     name: 'Chat',
-    component: ChatView
+    component: ChatView,
+    meta: { requiresAuth: true, title: '心灵对话 - 甜弈' }
   },
   {
     path: '/conversations',
     name: 'Conversations',
-    component: () => import('../views/ConversationView.vue')
+    component: () => import('../views/ConversationView.vue'),
+    meta: { requiresAuth: true, title: '对话记录 - 甜弈' }
   },
   {
     path: '/diary',
     name: 'DiaryList',
-    component: () => import('../views/DiaryView.vue')
+    component: () => import('../views/DiaryView.vue'),
+    meta: { requiresAuth: true, title: '心情日记 - 甜弈' }
   },
   {
     path: '/diary/write',
     name: 'DiaryWrite',
-    component: () => import('../views/DiaryWriteView.vue')
+    component: () => import('../views/DiaryWriteView.vue'),
+    meta: { requiresAuth: true, title: '写日记 - 甜弈' }
   },
   {
     path: '/diary/:id/edit',
     name: 'DiaryEdit',
-    component: () => import('../views/DiaryWriteView.vue')
+    component: () => import('../views/DiaryWriteView.vue'),
+    meta: { requiresAuth: true, title: '编辑日记 - 甜弈' }
   }
 ]
 
 const router = createRouter({
   history: createWebHashHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+
+  // 动态更新页面标题
+  if (to.meta.title) {
+    document.title = to.meta.title
+  } else {
+    document.title = '甜弈 - 心灵治愈助手'
+  }
+
+  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+  } else if (to.meta.guest && authStore.isLoggedIn) {
+    next({ name: 'Chat' })
+  } else {
+    next()
+  }
 })
 
 export default router

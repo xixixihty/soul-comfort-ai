@@ -1,9 +1,16 @@
+import { useAuthStore } from '../stores/auth'
+
 const API_BASE = '/api'
 
-export async function* streamChat(convId, message, userId = 'default_user') {
-  const url = `${API_BASE}/soulComfort/chat?convId=${encodeURIComponent(convId)}&userId=${encodeURIComponent(userId)}&message=${encodeURIComponent(message)}`
+export async function* streamChat(convId, message) {
+  const authStore = useAuthStore()
+  const url = `${API_BASE}/soulComfort/chat?convId=${encodeURIComponent(convId)}&message=${encodeURIComponent(message)}`
 
-  const response = await fetch(url)
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${authStore.token}`
+    }
+  })
 
   if (!response.ok) {
     throw new Error(`请求失败: ${response.status} ${response.statusText}`)
@@ -12,6 +19,7 @@ export async function* streamChat(convId, message, userId = 'default_user') {
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
+  let currentEvent = ''
 
   while (true) {
     const { done, value } = await reader.read()
@@ -23,11 +31,14 @@ export async function* streamChat(convId, message, userId = 'default_user') {
 
     for (const line of lines) {
       const trimmed = line.trim()
-      if (trimmed.startsWith('data:')) {
+      if (trimmed.startsWith('event:')) {
+        currentEvent = trimmed.substring(6).trim()
+      } else if (trimmed.startsWith('data:')) {
         const data = trimmed.substring(5).trim()
-        if (data) {
+        if (data && (!currentEvent || currentEvent === 'message')) {
           yield data
         }
+        currentEvent = ''
       }
     }
   }
