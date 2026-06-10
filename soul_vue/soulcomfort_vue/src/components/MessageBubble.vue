@@ -10,11 +10,23 @@
     </div>
     <div class="content-area">
       <div class="sender-name">{{ role === 'user' ? userName : '甜弈' }}</div>
-      <div class="bubble-text" :class="{ 'bubble-text--streaming': role === 'assistant' && isStreaming }">
-        <span v-html="renderedContent"></span>
-        <div v-if="role === 'assistant' && isStreaming" class="typing-indicator">
-          <span></span><span></span><span></span>
+      <div class="bubble-row">
+        <div class="bubble-text" :class="{ 'bubble-text--streaming': role === 'assistant' && isStreaming }">
+          <span v-html="renderedContent"></span>
+          <div v-if="role === 'assistant' && isStreaming" class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
         </div>
+        <el-button
+          v-if="!isStreaming"
+          :icon="ChatLineSquare"
+          circle
+          text
+          size="small"
+          class="quote-btn"
+          @click="$emit('quote', { role, content, index })"
+          title="引用回复"
+        />
       </div>
     </div>
   </div>
@@ -22,6 +34,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ChatLineSquare, UserFilled, StarFilled } from '@element-plus/icons-vue'
+
+defineEmits(['quote'])
 
 const props = defineProps({
   role: {
@@ -40,6 +55,10 @@ const props = defineProps({
   userName: {
     type: String,
     default: '我'
+  },
+  index: {
+    type: Number,
+    default: -1
   }
 })
 
@@ -88,8 +107,18 @@ const renderedContent = computed(() => {
 
 .sender-name {
   font-size: 12px;
-  color: #999;
+  color: var(--text-muted);
   margin-bottom: 4px;
+}
+
+.bubble-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.message-bubble.user .bubble-row {
+  flex-direction: row-reverse;
 }
 
 .bubble-text {
@@ -108,16 +137,32 @@ const renderedContent = computed(() => {
 }
 
 .message-bubble.user .bubble-text {
-  background: linear-gradient(135deg, #a0c4ff, #bdd4ff);
-  color: #333;
+  background: var(--bg-bubble-user);
+  color: var(--text-primary);
   border-bottom-right-radius: 4px;
 }
 
 .message-bubble.assistant .bubble-text {
-  background: linear-gradient(135deg, #fff8f0, #ffecd2);
-  color: #4a3728;
+  background: var(--bg-bubble-assistant);
+  color: var(--text-primary);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(180, 120, 80, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.quote-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.message-bubble:hover .quote-btn {
+  opacity: 1;
+}
+
+.quote-btn:hover {
+  color: var(--accent-color);
+  background: var(--bg-quote);
 }
 
 .typing-indicator {
@@ -133,7 +178,7 @@ const renderedContent = computed(() => {
 .typing-indicator span {
   width: 6px;
   height: 6px;
-  background: #d4a373;
+  background: var(--accent-color);
   border-radius: 50%;
   animation: typing 1.4s infinite;
 }

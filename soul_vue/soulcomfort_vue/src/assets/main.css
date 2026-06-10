@@ -7,8 +7,8 @@
 html, body {
   height: 100%;
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
-  background: #faf5ed;
-  color: #4a3728;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -17,12 +17,12 @@ html, body {
 }
 
 .el-button--primary {
-  --el-button-bg-color: #d4a373;
-  --el-button-border-color: #d4a373;
-  --el-button-hover-bg-color: #c98d5a;
-  --el-button-hover-border-color: #c98d5a;
-  --el-button-active-bg-color: #b87d4a;
-  --el-button-active-border-color: #b87d4a;
+  --el-button-bg-color: var(--accent-color);
+  --el-button-border-color: var(--accent-color);
+  --el-button-hover-bg-color: var(--accent-color);
+  --el-button-hover-border-color: var(--accent-color);
+  --el-button-active-bg-color: var(--accent-color);
+  --el-button-active-border-color: var(--accent-color);
 }
 
 .el-button.is-disabled {

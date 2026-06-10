@@ -38,6 +38,12 @@ const routes = [
     name: 'DiaryEdit',
     component: () => import('../views/DiaryWriteView.vue'),
     meta: { requiresAuth: true, title: '编辑日记 - 甜弈' }
+  },
+  {
+    path: '/checkin-history',
+    name: 'CheckinHistory',
+    component: () => import('../views/CheckinHistoryView.vue'),
+    meta: { requiresAuth: true, title: '签到记录 - 甜弈' }
   }
 ]
 
@@ -49,7 +55,6 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  // 动态更新页面标题
   if (to.meta.title) {
     document.title = to.meta.title
   } else {

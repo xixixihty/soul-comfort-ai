@@ -140,10 +140,17 @@
           :content="msg.content"
           :user-name="authStore.nickname"
           :is-streaming="index === messages.length - 1 && msg.role === 'assistant' && isStreaming"
+          :index="index"
+          @quote="handleQuote"
         />
       </div>
 
-      <ChatInput :disabled="isStreaming || !currentConvId" @send="sendMessage" />
+      <ChatInput
+        :disabled="isStreaming"
+        :quote-msg="quoteMsg"
+        @send="sendMessage"
+        @cancel-quote="quoteMsg = null"
+      />
     </section>
   </div>
 </template>
@@ -180,6 +187,7 @@ const convPage = ref(1)
 const convPageSize = 20
 const totalConvs = ref(0)
 const panelCollapsed = ref(false)
+const quoteMsg = ref(null)
 
 const quickPrompts = [
   '我今天心情不太好，能陪我说说话吗？',
@@ -328,6 +336,10 @@ async function deleteCurrentConversation() {
   await handleDeleteConv(conv || { id: currentConvId.value, title: '当前对话' })
 }
 
+function handleQuote({ role, content, index }) {
+  quoteMsg.value = { role, content, index }
+}
+
 async function sendMessage(text) {
   if (isStreaming.value) return
 
@@ -365,8 +377,11 @@ async function sendMessage(text) {
 
   isStreaming.value = true
 
+  const q = quoteMsg.value
+  quoteMsg.value = null
+
   try {
-    for await (const chunk of streamChat(currentConvId.value, text)) {
+    for await (const chunk of streamChat(currentConvId.value, text, q)) {
       assistantMsg.content += chunk
       scrollToBottom()
     }
@@ -386,8 +401,6 @@ onMounted(async () => {
   const targetConvId = route.query.convId
   if (targetConvId && conversations.value.some(c => c.id === targetConvId)) {
     await switchConversation(targetConvId)
-  } else if (conversations.value.length > 0) {
-    await switchConversation(conversations.value[0].id)
   }
 })
 
@@ -410,8 +423,8 @@ watch(() => route.query.convId, (newConvId) => {
 .chat-view {
   display: flex;
   height: 100vh;
-  background: #fffdf9;
-  box-shadow: 0 0 40px rgba(160, 120, 80, 0.06);
+  background: var(--bg-chat-area);
+  box-shadow: var(--shadow);
 }
 
 .conv-panel {
@@ -419,8 +432,8 @@ watch(() => route.query.convId, (newConvId) => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #f0e6dc;
-  background: #fefbf6;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-chat-header);
   transition: width 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
 }
@@ -440,16 +453,16 @@ watch(() => route.query.convId, (newConvId) => {
 .panel-title {
   font-size: 16px;
   font-weight: 600;
-  color: #5c3d2e;
+  color: var(--text-primary);
 }
 
 .new-btn {
-  background: linear-gradient(135deg, #fa9e6c, #d4a373);
+  background: var(--accent-gradient);
   border: none;
 }
 
 .new-btn:hover {
-  background: linear-gradient(135deg, #f08a4a, #c98d5a);
+  background: var(--accent-gradient-hover);
 }
 
 .panel-search {
@@ -467,7 +480,7 @@ watch(() => route.query.convId, (newConvId) => {
   justify-content: center;
   padding: 40px 16px;
   font-size: 13px;
-  color: #b8956a;
+  color: var(--accent-color);
 }
 
 .conv-item {
@@ -482,11 +495,11 @@ watch(() => route.query.convId, (newConvId) => {
 }
 
 .conv-item:hover {
-  background: #f5ede0;
+  background: var(--bg-conv-item-hover);
 }
 
 .conv-item--active {
-  background: #f5e6d5;
+  background: var(--bg-active);
 }
 
 .conv-item-main {
@@ -503,7 +516,7 @@ watch(() => route.query.convId, (newConvId) => {
 
 .conv-item-title {
   font-size: 14px;
-  color: #5c3d2e;
+  color: var(--text-primary);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -512,7 +525,7 @@ watch(() => route.query.convId, (newConvId) => {
 
 .conv-item-date {
   font-size: 11px;
-  color: #b8956a;
+  color: var(--text-secondary);
 }
 
 .conv-item-actions {
@@ -529,7 +542,7 @@ watch(() => route.query.convId, (newConvId) => {
   display: flex;
   justify-content: center;
   padding: 10px 0 14px;
-  border-top: 1px solid #f0e6dc;
+  border-top: 1px solid var(--border-color);
 }
 
 .chat-area {
@@ -544,8 +557,8 @@ watch(() => route.query.convId, (newConvId) => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  background: linear-gradient(180deg, #fff8f0, #fffdf9);
-  border-bottom: 1px solid #f5ede0;
+  background: var(--gradient-chat);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -557,7 +570,7 @@ watch(() => route.query.convId, (newConvId) => {
 .current-title {
   font-size: 16px;
   font-weight: 500;
-  color: #5c3d2e;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -591,14 +604,14 @@ watch(() => route.query.convId, (newConvId) => {
 .welcome-title {
   margin: 0 0 12px;
   font-size: 24px;
-  color: #5c3d2e;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .welcome-desc {
   margin: 0 0 32px;
   font-size: 15px;
-  color: #b8956a;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 
@@ -612,15 +625,15 @@ watch(() => route.query.convId, (newConvId) => {
 .prompt-tag {
   padding: 8px 18px;
   border-radius: 20px;
-  background: #faf0e2;
-  color: #8b6b5a;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .prompt-tag:hover {
-  background: #f0dcc5;
-  color: #5c3d2e;
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 </style>
