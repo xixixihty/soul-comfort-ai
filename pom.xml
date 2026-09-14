@@ -59,10 +59,11 @@
             <version>1.1.0-beta7</version>
         </dependency>
 
+        <!-- 硅基流动(SiliconFlow)大模型集成：OpenAI 兼容端点，使用 langchain4j-open-ai 手动装配 Bean -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-community-dashscope-spring-boot-starter</artifactId>
-            <version>1.1.0-beta7</version>
+            <artifactId>langchain4j-open-ai</artifactId>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
@@ -126,6 +127,13 @@
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
             <version>0.4</version>
+        </dependency>
+
+        <!-- 阿里云 OSS：用户头像对象存储 -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.4</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

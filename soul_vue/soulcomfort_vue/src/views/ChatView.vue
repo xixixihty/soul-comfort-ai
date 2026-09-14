@@ -102,7 +102,11 @@
           @click="panelCollapsed = false"
           title="展开对话列表"
         />
-        <span class="current-title">{{ currentConvTitle || '选择一个对话开始聊天' }}</span>
+        <!-- 收起对话列表且未选中对话时，隐藏"选择一个对话开始聊天"占位（列表已隐藏，提示无意义） -->
+        <span
+          v-if="currentConvTitle || !panelCollapsed"
+          class="current-title"
+        >{{ currentConvTitle || '选择一个对话开始聊天' }}</span>
         <el-button
           v-if="currentConvId"
           :icon="Delete"
@@ -139,6 +143,7 @@
           :role="msg.role"
           :content="msg.content"
           :user-name="authStore.nickname"
+          :user-avatar="authStore.avatarUrl"
           :is-streaming="index === messages.length - 1 && msg.role === 'assistant' && isStreaming"
           :index="index"
           @quote="handleQuote"
@@ -156,7 +161,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Delete, Edit, Search, Sunny, Fold, Expand } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -164,6 +169,7 @@ import { useAuthStore } from '../stores/auth.js'
 import MessageBubble from '../components/MessageBubble.vue'
 import ChatInput from '../components/ChatInput.vue'
 import { streamChat } from '../api/chat.js'
+import { applyBgByPanel, applyBgNeutral } from '../composables/useBgLayer.js'
 import {
   fetchConversationList,
   fetchConversation,
@@ -188,6 +194,23 @@ const convPageSize = 20
 const totalConvs = ref(0)
 const panelCollapsed = ref(false)
 const quoteMsg = ref(null)
+
+/* 背景联动（算法见 composables/useBgLayer.js）：展开面板→背景收拢进聊天区；折叠→放大填满主内容区。
+   离开聊天页时置为中性布局（填满主内容区），避免把聊天收拢态残留到其他模块 */
+function onWindowResize() {
+  applyBgByPanel(panelCollapsed.value)
+}
+
+watch(panelCollapsed, applyBgByPanel)
+onMounted(() => {
+  window.addEventListener('resize', onWindowResize)
+  // 首屏即应用当前面板态，避免初始闪动
+  applyBgByPanel(panelCollapsed.value)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', onWindowResize)
+  applyBgNeutral()
+})
 
 const quickPrompts = [
   '我今天心情不太好，能陪我说说话吗？',

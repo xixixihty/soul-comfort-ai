@@ -4,6 +4,12 @@ import ChatView from '../views/ChatView.vue'
 
 const routes = [
   {
+    path: '/welcome',
+    name: 'Welcome',
+    component: () => import('../views/WelcomeView.vue'),
+    meta: { guest: true, title: '走向甜弈 - 心灵治愈助手' }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/LoginView.vue'),
@@ -44,6 +50,18 @@ const routes = [
     name: 'CheckinHistory',
     component: () => import('../views/CheckinHistoryView.vue'),
     meta: { requiresAuth: true, title: '签到记录 - 甜弈' }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('../views/AboutView.vue'),
+    meta: { title: '关于甜弈' }
+  },
+  {
+    path: '/services',
+    name: 'Services',
+    component: () => import('../views/ServicesView.vue'),
+    meta: { title: '服务与功能 - 甜弈' }
   }
 ]
 

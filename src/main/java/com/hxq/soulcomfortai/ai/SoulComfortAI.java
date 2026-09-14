@@ -17,21 +17,21 @@ import static com.hxq.soulcomfortai.Constant.SystemPrompt.SYSTEM_PROMPT;
 public class SoulComfortAI {
 
     @Resource
-    private ChatModel qwenChatModel;
+    private ChatModel siliconflowChatModel;
 
 
 
     public String chat(String message) {
         SystemMessage systemMessage = SystemMessage.from(SYSTEM_PROMPT);
         UserMessage userMessage = UserMessage.from(message);
-        ChatResponse chat = qwenChatModel.chat(systemMessage, userMessage);
+        ChatResponse chat = siliconflowChatModel.chat(systemMessage, userMessage);
         AiMessage aiMessage = chat.aiMessage();
         log.debug("AI 响应完成 length={}", aiMessage.text().length());
         return aiMessage.text();
     }
 
     public String chatWithMessage(UserMessage userMessage) {
-        ChatResponse chat = qwenChatModel.chat(userMessage);
+        ChatResponse chat = siliconflowChatModel.chat(userMessage);
         AiMessage aiMessage = chat.aiMessage();
         log.debug("AI 响应完成 length={}", aiMessage.text().length());
         return aiMessage.text();

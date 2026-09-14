@@ -54,7 +54,18 @@ export async function* streamChat(convId, message, quoteMsg) {
         if (trimmed.startsWith('data:')) {
           const data = trimmed.substring(5).trim()
           if (data && (!currentEvent || currentEvent === 'message')) {
-            yield data
+            // 后端将载荷包装为 {"content":"..."}（换行被转义为字面 \n，保护 SSE 协议）。
+            // 此处解析还原；解析失败（历史/旧格式）时按原样透传。
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed && typeof parsed.content === 'string') {
+                yield parsed.content
+              } else {
+                yield data
+              }
+            } catch {
+              yield data
+            }
           }
           currentEvent = ''
         }

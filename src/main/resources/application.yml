@@ -9,27 +9,39 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       database: 1
-      timeout: 3000ms
+      timeout: 5000ms
       lettuce:
         pool:
           max-active: 8
           max-idle: 8
           min-idle: 2
 
-langchain4j:
-  community:
-    dashscope:
-      chat-model:
-        model-name: qwen-max
-        api-key: ${ai.open.api-key}
-      embedding-model:
-        model-name: text-embedding-v4
-        api-key: ${ai.open.api-key}
-      streaming-chat-model:
-        model-name: qwen-max
-        api-key: ${ai.open.api-key}
+# 硅基流动(SiliconFlow)大模型配置（OpenAI 兼容端点，chat/streaming/embedding 统一定向）
+siliconflow:
+  base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
+  api-key: ${SILICONFLOW_API_KEY:}
+  chat-model: ${SILICONFLOW_CHAT_MODEL:Qwen/Qwen2.5-72B-Instruct}
+  streaming-chat-model: ${SILICONFLOW_STREAMING_CHAT_MODEL:Qwen/Qwen2.5-72B-Instruct}
+  embedding-model: ${SILICONFLOW_EMBEDDING_MODEL:BAAI/bge-m3}
+# 智谱 web-search MCP 专用 Key（本地环境由 application-local.yml 覆写）
 bigmodel:
-  api-key: ${bigmodel.api-key}
+  api-key: ${BIGMODEL_API_KEY:}
+
+# 阿里云 OSS（用户头像对象存储）：凭据走环境变量，access-key 禁止写入配置文件
+oss:
+  enabled: ${OSS_ENABLED:true}
+  endpoint: ${OSS_ENDPOINT:oss-cn-hangzhou.aliyuncs.com}
+  region: ${OSS_REGION:cn-hangzhou}
+  bucket: ${OSS_BUCKET:}
+  access-key-id: ${OSS_ACCESS_KEY_ID:}
+  access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+  url-prefix: ${OSS_URL_PREFIX:}
+
+# 智谱 web-search MCP 工具（默认关闭：其 open.bigmodel.cn SSE 通道不稳定，曾在流式聊天期间超时/重置
+# 导致整条回答中断；有需要时改为 true 并按需调整超时）
+mcp:
+  enabled: ${MCP_ENABLED:false}
+  timeout-seconds: ${MCP_TIMEOUT_SECONDS:15}
 server:
   port: 8081
   servlet:

@@ -53,9 +53,10 @@ public class AuthService {
         authRepository.save(user);
 
         String token = jwtUtil.generateToken(userId, username);
+        LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.fromUser(user);
         return LoginResponse.builder()
                 .token(token)
-                .user(LoginResponse.UserInfo.fromUser(user))
+                .user(withAvatar(userId, userInfo))
                 .build();
     }
 
@@ -78,7 +79,7 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         return LoginResponse.builder()
                 .token(token)
-                .user(LoginResponse.UserInfo.fromUser(user))
+                .user(withAvatar(user.getId(), LoginResponse.UserInfo.fromUser(user)))
                 .build();
     }
 
@@ -111,6 +112,12 @@ public class AuthService {
     public LoginResponse.UserInfo getCurrentUser(String userId) {
         User user = authRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(1001, "用户不存在"));
-        return LoginResponse.UserInfo.fromUser(user);
+        return withAvatar(userId, LoginResponse.UserInfo.fromUser(user));
+    }
+
+    /** 从 Redis 读取用户头像地址并填充到用户信息（头像地址存于 Redis 而非用户表） */
+    private LoginResponse.UserInfo withAvatar(String userId, LoginResponse.UserInfo userInfo) {
+        userInfo.setAvatarUrl(redis.opsForValue().get(RedisConstants.avatarKey(userId)));
+        return userInfo;
     }
 }

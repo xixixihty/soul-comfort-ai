@@ -86,6 +86,10 @@ public class RedisConstants {
         return NS + "ratelimit:login:lock:" + username;
     }
 
+    public static String avatarKey(String userId) {
+        return NS + "user:avatar:" + userId;
+    }
+
     public static String checkinKey(String checkinId) {
         return NS + "checkin:" + checkinId;
     }

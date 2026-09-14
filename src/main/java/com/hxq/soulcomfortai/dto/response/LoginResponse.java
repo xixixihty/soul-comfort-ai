@@ -23,6 +23,8 @@ public class LoginResponse {
         private String id;
         private String username;
         private String nickname;
+        /** 用户头像地址（阿里云 OSS，存于 Redis，未上传时为 null） */
+        private String avatarUrl;
 
         public static UserInfo fromUser(User user) {
             return UserInfo.builder()
