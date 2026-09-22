@@ -124,11 +124,11 @@ function goLogin() {
   align-self: center;
   padding: 34px 30px 26px;
   border-radius: 24px;
-  background: rgba(255, 251, 244, 0.5);
-  border: 1px solid rgba(212, 163, 115, 0.32);
+  background: rgba(251,244,247, 0.5);
+  border: 1px solid rgba(232,169,193, 0.32);
   backdrop-filter: blur(16px) saturate(1.3);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  box-shadow: 0 12px 40px rgba(180, 120, 80, 0.14);
+  box-shadow: 0 12px 40px rgba(175,120,150, 0.14);
 }
 
 .welcome-card-brand {
@@ -144,7 +144,7 @@ function goLogin() {
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 4px;
-  color: #8a4b2e;
+  color: #a65b80;
   font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
 }
 
@@ -153,7 +153,7 @@ function goLogin() {
   font-size: 14px;
   line-height: 1.9;
   letter-spacing: 1px;
-  color: #7c5c42;
+  color: #7c5a72;
   font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
   text-align: center;
 }
@@ -167,7 +167,7 @@ function goLogin() {
   padding: 14px 0;
   border: none;
   border-radius: 14px;
-  background: rgba(255, 138, 61, 0.6);
+  background: rgba(224,144,180, 0.6);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -177,17 +177,17 @@ function goLogin() {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   box-shadow:
-    0 4px 14px rgba(255, 130, 40, 0.35),
+    0 4px 14px rgba(216,130,170, 0.35),
     inset 0 1px 2px rgba(255, 255, 255, 0.35);
   transition: all 0.3s;
 }
 
 .welcome-cta:hover {
-  background: rgba(255, 122, 41, 0.75);
+  background: rgba(208,127,166, 0.75);
   border-color: rgba(255, 255, 255, 0.65);
   transform: translateY(-2px);
   box-shadow:
-    0 6px 18px rgba(255, 130, 40, 0.45),
+    0 6px 18px rgba(216,130,170, 0.45),
     inset 0 1px 2px rgba(255, 255, 255, 0.4);
 }
 
@@ -204,26 +204,26 @@ function goLogin() {
   margin: 16px 0 0;
   font-size: 12px;
   letter-spacing: 1px;
-  color: #9a8771;
+  color: #a08a9e;
   text-align: center;
 }
 
 html.dark .welcome-card {
-  background: rgba(42, 33, 27, 0.6);
-  border-color: rgba(212, 163, 115, 0.28);
+  background: rgba(44,35,48, 0.6);
+  border-color: rgba(232,169,193, 0.28);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
 html.dark .welcome-card-title {
-  color: #f0c89a;
+  color: #f6d5e2;
 }
 
 html.dark .welcome-card-text {
-  color: #d9c3a9;
+  color: #dbc4d4;
 }
 
 html.dark .welcome-card-foot {
-  color: #84705f;
+  color: #7f6b7f;
 }
 
 @media (max-width: 960px) {

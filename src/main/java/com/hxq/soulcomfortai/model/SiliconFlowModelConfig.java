@@ -38,7 +38,8 @@ public class SiliconFlowModelConfig {
                 // 同一语义问题多次提问能得到不同措辞，避免 0.7 下的模板化收敛
                 .temperature(0.9)
                 .presencePenalty(0.3)
-                .maxTokens(2048)
+                // 回复纪律 30-120 字：400 token 物理上写不下八股攻略清单，从源头掐断长篇助手腔
+                .maxTokens(400)
                 .timeout(Duration.ofSeconds(60))
                 .logRequests(false)
                 .logResponses(false)
@@ -76,7 +77,8 @@ public class SiliconFlowModelConfig {
                 .apiKey(apiKey)
                 .temperature(0.9)
                 .presencePenalty(0.3)
-                .maxTokens(2048)
+                // 与主对话模型一致：短输出上限，物理阻断攻略式长篇
+                .maxTokens(400)
                 .logRequests(false)
                 .logResponses(false)
                 .listeners(List.of(chatModelListener))
@@ -91,7 +93,10 @@ public class SiliconFlowModelConfig {
                 .baseUrl(baseUrl)
                 .modelName(modelName)
                 .apiKey(apiKey)
-                .maxRetries(1)
+                // 长时间空闲后 keep-alive 连接会被服务端单方面关闭，复用即 Connection reset；
+                // 重试会新建连接，3 次基本可自愈（此前 1 次太低，一次抖动就降级丢知识库）
+                .maxRetries(3)
+                .timeout(Duration.ofSeconds(30))
                 .build();
     }
 }

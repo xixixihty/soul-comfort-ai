@@ -16,19 +16,19 @@ html, body {
   height: 100%;
 }
 
-/* 主按钮：鲜艳橙色 + 磨砂玻璃 */
+/* 主按钮：品牌粉深一档 + 磨砂玻璃 */
 .el-button--primary {
   --el-button-text-color: #ffffff;
-  --el-button-bg-color: rgba(255, 138, 61, 0.58);
-  --el-button-border-color: rgba(255, 255, 255, 0.5);
-  --el-button-hover-bg-color: rgba(255, 122, 41, 0.72);
-  --el-button-hover-border-color: rgba(255, 255, 255, 0.65);
-  --el-button-active-bg-color: rgba(240, 106, 30, 0.8);
-  --el-button-active-border-color: rgba(255, 255, 255, 0.7);
+  --el-button-bg-color: rgba(194,112,143, 0.72);
+  --el-button-border-color: rgba(255, 255, 255, 0.45);
+  --el-button-hover-bg-color: rgba(176,95,131, 0.85);
+  --el-button-hover-border-color: rgba(255, 255, 255, 0.6);
+  --el-button-active-bg-color: rgba(160,80,115, 0.92);
+  --el-button-active-border-color: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   box-shadow:
-    0 4px 14px rgba(255, 130, 40, 0.35),
+    0 4px 14px rgba(176,95,131, 0.4),
     inset 0 1px 2px rgba(255, 255, 255, 0.35);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
@@ -36,7 +36,39 @@ html, body {
 .el-button--primary:hover,
 .el-button--primary:focus {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(255, 130, 40, 0.45);
+  box-shadow: 0 6px 18px rgba(176,95,131, 0.5);
+}
+
+/* 夜间模式：半透明粉底叠在深色背景上会被"吃掉"显得灰淡，
+   改为实色 + 提亮一档，保证按钮在暗底上依然清晰醒目 */
+html.dark .el-button--primary {
+  --el-button-text-color: #ffffff;
+  --el-button-bg-color: #c2708f;
+  --el-button-border-color: rgba(255, 255, 255, 0.38);
+  --el-button-hover-bg-color: #d089a8;
+  --el-button-hover-border-color: rgba(255, 255, 255, 0.5);
+  --el-button-active-bg-color: #b05f83;
+  --el-button-active-border-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.28);
+}
+
+html.dark .el-button--primary:hover,
+html.dark .el-button--primary:focus {
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+/* 夜间模式次要按钮：默认白底过于刺眼，换成暗色卡片底 + 粉边 */
+html.dark .el-button:not(.el-button--primary):not(.el-button--danger):not(.is-text):not(.is-link) {
+  --el-button-bg-color: #2c2330;
+  --el-button-border-color: rgba(232, 169, 193, 0.42);
+  --el-button-text-color: #e9d3e2;
+  --el-button-hover-bg-color: #3a2d40;
+  --el-button-hover-border-color: rgba(232, 169, 193, 0.6);
+  --el-button-hover-text-color: #f6d5e2;
 }
 
 .el-button.is-disabled {

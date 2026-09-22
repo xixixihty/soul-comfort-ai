@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE || '/api',
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' }
 })
@@ -77,13 +77,23 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /** 修改昵称：成功后用后端回读的最新用户信息同步本地 */
+  async function updateProfile(nickname) {
+    const res = await api.put('/auth/profile', { nickname })
+    if (res.data.code !== 0) {
+      throw new Error(res.data.message || '保存失败')
+    }
+    userInfo.value = res.data.data
+    localStorage.setItem('soul_user', JSON.stringify(res.data.data))
+    return res.data.data
+  }
+
   /** 上传头像：文件交给后端存阿里云 OSS，返回的图片地址写回本地用户信息 */
   async function uploadAvatar(file) {
     const form = new FormData()
     form.append('file', file)
-    const res = await axios.post('/api/user/avatar', form, {
+    const res = await api.post('/user/avatar', form, {
       headers: {
-        Authorization: `Bearer ${token.value}`,
         'Content-Type': 'multipart/form-data'
       },
       timeout: 30000
@@ -109,6 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     fetchUserInfo,
+    updateProfile,
     uploadAvatar
   }
 })

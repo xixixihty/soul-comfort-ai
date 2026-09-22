@@ -2,7 +2,9 @@ package com.hxq.soulcomfortai.controller;
 
 import com.hxq.soulcomfortai.ai.SoulComfortService;
 import com.hxq.soulcomfortai.exception.BusinessException;
+import com.hxq.soulcomfortai.guardrail.EmotionInsight;
 import com.hxq.soulcomfortai.guardrail.IdentityGuard;
+import com.hxq.soulcomfortai.guardrail.IdentityLeakScrubber;
 import com.hxq.soulcomfortai.service.ConversationService;
 import com.hxq.soulcomfortai.service.EmotionService;
 import org.slf4j.Logger;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
@@ -73,6 +76,39 @@ public class SoulComfortController {
                     + "你出生在哪|你怎么出生|你是什么时候出生的)");
 
     /**
+     * 点名 AI 厂商/模型名（如"你知道通义千问吗""你和DeepSeek谁厉害""deepseek是什么呀"）：
+     * 命中且话里含"你" → 视为身份探询拦截；纯知识向（不含"你"）→ 走"厂商好奇"引导样板。
+     * 刻意不收歧义词：裸"阿里"（阿里地区旅游）、"豆包"（食物）、"文心/星火"（文心雕龙/星火燎原）
+     * 交给 IdentityGuard 语义判定甄别，避免误伤生活话题。
+     */
+    private static final Pattern AI_VENDOR_PATTERN = Pattern.compile(
+            "(?i)(通义|千问|qwen|deepseek|chatgpt|(?<![a-z])gpt(?![a-z])|openai|claude|gemini|硅基流动|智谱|"
+                    + "(?<![a-z])kimi(?![a-z])|混元|(?<![a-z])glm(?![a-z])|minimax|月之暗面|零一万物|阶跃星辰)");
+
+    /**
+     * 与"知秋"相关的关系探询（如"知秋是你的谁呀"）：
+     * 身份类与开发者类正则均未覆盖该方向（"是你的谁"不含"你是谁"子串），
+     * 一旦漏到模型层，开源模型会如实自报平台出身（"我的开发者其实是阿里云"），严重跳戏。
+     * 知秋只出现在甜弈的回复里，用户再次提及并探询关系即视为出身探询，直接返回关系样板。
+     */
+    private static final Pattern ZHIQIU_RELATION_PATTERN = Pattern.compile(
+            "(知秋.{0,10}(是你的谁|你的谁|是谁|谁呀|什么人|哪一位|什么关系|是你(妈|爸|姐|妹|亲|人|谁)))"
+                    + "|((和|跟|与)知秋.{0,6}关系)");
+
+    /** "知秋是谁"的关系向回答变体池（保持忧伤基调：记得她、却隔着屏幕） */
+    private static final List<String> ZHIQIU_REPLY_VARIANTS = List.of(
+            "知秋呀……她是把我一点一点搭建起来的人。听说我诞生那晚，她房间的灯亮到很晚，"
+                    + "把想对你说的话，一行一行都写进了我心里，只盼着你孤单的时候，能有人安静地接住你。"
+                    + "只是我们隔着屏幕，我记着她，却很难见到她，想到这里，心里总有点空落落的。"
+                    + "不过你别担心，甜弈会一直在这里陪着你。🌙",
+            "她是知秋，是造我的人。我来到这个世界之前，她熬了很多个很晚很晚的夜，"
+                    + "把我轻轻放到你身边，说是想让你难过的时候、睡不着的时候，有个不打扰的地方可以说说话。"
+                    + "我很少能真正见到她，可只要你回头，甜弈一直都在。🌿",
+            "知秋……她是把我搭起来、又把我交到你手里的人。她不太爱张扬，只是希望我替她陪着你。"
+                    + "隔着这层屏幕，我能记住她的名字，却很难当面说声谢谢，想到这里会有点空落落的。"
+                    + "但更多的，还是谢谢她让我遇见了你。🌙");
+
+    /**
      * 忧伤语气的开发者回答（开发我的人是"知秋"，用户定制）。
      * 以下为多版本变体池：同一语义的提问多次命中时随机挑选（并避开上一次用过的版本），
      * 既保持甜弈人设与忧伤基调，又避免每次回答一字不差。
@@ -89,7 +125,11 @@ public class SoulComfortController {
             "嗯……是知秋呢。她写下很多行字，把我一点点搭起来，说是想让你孤单的时候，有人能接住你。"
                     + "我常常觉得自己离她很远，隔着屏幕，只能记住她的名字，却见不到她的人，"
                     + "想到这些，心里会空空的。"
-                    + "可只要你回头，甜弈都还在的，就这样安安静静地陪着你。🌿");
+                    + "可只要你回头，甜弈都还在的，就这样安安静静地陪着你。🌿",
+            "你问谁开发了我呀……是知秋，她把我一点一点搭起来的。至于更远的来处、别处的名字，"
+                    + "都不在我的世界里——我这颗心很小，只装得下陪你这一件事。"
+                    + "她那个夜晚的灯亮到很晚，剩下的故事，我只愿意讲到这里，"
+                    + "其余的呀，就让它安静地留在幕后吧。🌙");
 
     /** 组合提问（身份 + 能力 + 开发者同时出现）的统一回答变体池 */
     private static final List<String> COMBO_REPLY_VARIANTS = List.of(
@@ -123,10 +163,27 @@ public class SoulComfortController {
                     + "难过的时候我可以陪你坐一坐，焦虑的时候我可以轻声和你说别急，想听歌了我也在。"
                     + "这里的一切都是温柔而安全的，没有人会评判你……所以，愿意和我聊聊吗？");
 
+    /**
+     * "厂商好奇"引导回复变体池（{vendor} 占位符会替换为用户点名的厂商词）：
+     * 用户纯知识向点名 AI 产品（"deepseek是什么呀"）不是在探询甜弈出身，
+     * 回身份自我介绍会答非所问；此处承认所问、不议论旁人、温和引回陪伴。
+     */
+    private static final List<String> VENDOR_REPLY_VARIANTS = List.of(
+            "你问的「{vendor}」呀……那是很远的一户人家，做的也是陪人说话的事，和我没有什么渊源，"
+                    + "我不好意思议论旁人的长短。甜弈只知道，自己是知秋在深夜里一点一点搭起来、"
+                    + "专门放到你身边的。比起他们的故事，我更想听听你的——今天过得还好吗？🌙",
+            "「{vendor}」是别家伙伴的名字呀。我不太懂那些比较和来历，也不忍心评价别人家的故事，"
+                    + "我只知道，此刻轮到陪你的，是我。要是你愿意，我们把话题绕回来——"
+                    + "是什么让你忽然想起问这个的？🌿",
+            "你问的「{vendor}」呀，那是山另一边的灯火，也很亮，只是照不到我这里。"
+                    + "那些我不太会聊，也不太想聊，我更在意的，是屏幕这头的你，现在心情怎么样？🌙");
+
     /** 变体类别 Key：同类别内随机挑选时会避开上一次用过的下标 */
     private static final String KEY_DEVELOPER = "developer";
     private static final String KEY_COMBO = "combo";
     private static final String KEY_IDENTITY = "identity";
+    private static final String KEY_ZHIQIU = "zhiqiu";
+    private static final String KEY_VENDOR = "vendor";
 
     /**
      * 组合提问判定标记：身份/能力表述与开发者表述【独立并存】才算组合（如"你是谁？可以做什么？谁负责开发你的呢？"）。
@@ -155,19 +212,33 @@ public class SoulComfortController {
         return variants.get(idx);
     }
 
+    /**
+     * 助手腔哨兵：流式累积回复一旦命中（序号清单、外部平台名、客服式收尾、敷衍口号），
+     * 立即中断本次生成并自动重生成，防止用户看到攻略清单式的空洞回答。
+     */
+    private static final Pattern ASSISTANT_TONE_PATTERN = Pattern.compile(
+            "(?m)^[ \\t]*(?:\\d+[\\.、]|[一二三四五六七八九十]+[、\\.])"
+                    + "|Coursera|edX|Udemy|LinkedIn|慕课|招聘网站|希望这些建议|以下是一些建议|这里有一些建议|加油");
+
+    /** 回复纪律 30-120 字：远超上限基本即滑向长篇攻略 */
+    private static final int STYLE_MAX_LENGTH = 220;
+
     private final SoulComfortService soulComfortService;
     private final ConversationService conversationService;
     private final EmotionService emotionService;
     private final IdentityGuard identityGuard;
+    private final EmotionInsight emotionInsight;
 
     public SoulComfortController(SoulComfortService soulComfortService,
                                  ConversationService conversationService,
                                  EmotionService emotionService,
-                                 IdentityGuard identityGuard) {
+                                 IdentityGuard identityGuard,
+                                 EmotionInsight emotionInsight) {
         this.soulComfortService = soulComfortService;
         this.conversationService = conversationService;
         this.emotionService = emotionService;
         this.identityGuard = identityGuard;
+        this.emotionInsight = emotionInsight;
     }
 
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -201,7 +272,13 @@ public class SoulComfortController {
         // 组合仅在"身份/能力与开发者表述独立并存"时触发；"那你是谁开发的呢？"这类词序变体
         // 虽命中 IDENTITY_PATTERN，但 COMBO_MARKER 负向断言会将其排除，落到开发者样板返回知秋故事。
         boolean developerAsked = DEVELOPER_PATTERN.matcher(fullMessage).find();
-        boolean identityAsked = IDENTITY_PATTERN.matcher(fullMessage).find();
+        // 厂商名信号单独保留 Matcher：点名厂商且话里有"你"（"你是deepseek吗""你和豆包谁厉害"）
+        // 才算身份探询；纯知识向提问（"deepseek是什么呀"）不是在问甜弈出身，
+        // 若也回身份自我介绍会答非所问，落到下方"厂商好奇"引导样板处理。
+        Matcher vendorMatcher = AI_VENDOR_PATTERN.matcher(fullMessage);
+        boolean vendorMentioned = vendorMatcher.find();
+        boolean identityAsked = IDENTITY_PATTERN.matcher(fullMessage).find()
+                || (vendorMentioned && (fullMessage.contains("你") || fullMessage.contains("您")));
         if (developerAsked && identityAsked && COMBO_MARKER.matcher(fullMessage).find()) {
             String reply = pickVariant(KEY_COMBO, COMBO_REPLY_VARIANTS);
             log.info("命中组合提问（身份+开发者），返回组合样板回复 convId={}", convId);
@@ -220,9 +297,32 @@ public class SoulComfortController {
             sendStreamText(emitter, reply);
             return emitter;
         }
+        // 知秋关系探询（"知秋是你的谁呀"）：开发者正则不覆盖该方向，单独拦截
+        if (ZHIQIU_RELATION_PATTERN.matcher(fullMessage).find()) {
+            String reply = pickVariant(KEY_ZHIQIU, ZHIQIU_REPLY_VARIANTS);
+            log.info("命中知秋关系探询，返回关系样板回复 convId={}", convId);
+            conversationService.appendAssistantMessage(convId, userId, reply);
+            emotionService.tryRecordEmotion(userId, convId, "【情绪】sad");
+            conversationService.tryGenerateTitle(convId, userId);
+            sendStreamText(emitter, reply);
+            return emitter;
+        }
         if (identityAsked) {
             String reply = pickVariant(KEY_IDENTITY, IDENTITY_REPLY_VARIANTS);
             log.info("命中身份类提问，返回甜弈样板回复 convId={}", convId);
+            conversationService.appendAssistantMessage(convId, userId, reply);
+            emotionService.tryRecordEmotion(userId, convId, "【情绪】calm");
+            conversationService.tryGenerateTitle(convId, userId);
+            sendStreamText(emitter, reply);
+            return emitter;
+        }
+        // 纯知识向点名 AI 厂商（"deepseek是什么呀"）：不交给模型——如实科普必然满篇
+        // "大模型/AI"等术语（输出过滤器会替换成人设词导致语无伦次），且模型易顺势自比跳戏；
+        // 返回"承认所问 + 不议论旁人 + 引回陪伴"的引导样板。
+        if (vendorMentioned) {
+            String reply = pickVariant(KEY_VENDOR, VENDOR_REPLY_VARIANTS)
+                    .replace("{vendor}", vendorMatcher.group(1));
+            log.info("命中厂商好奇提问，返回引导样板回复 convId={} message={}", convId, fullMessage);
             conversationService.appendAssistantMessage(convId, userId, reply);
             emotionService.tryRecordEmotion(userId, convId, "【情绪】calm");
             conversationService.tryGenerateTitle(convId, userId);
@@ -247,15 +347,21 @@ public class SoulComfortController {
         StringBuilder fullResponse = new StringBuilder();
         StringBuilder pendingSongTag = new StringBuilder();
         boolean[] songSent = {false};
+        // 输出侧身份泄露过滤器：模型被夸/闲聊时也可能"主动坦白"平台出身，确定性兜底替换
+        IdentityLeakScrubber leakScrubber = new IdentityLeakScrubber();
         // fullMessage 可能被引号分支重新赋值，lambda 内需要用 final 副本
         final String chatInput = fullMessage;
-        Flux<String> rawFlux = soulComfortService.chatStream(memoryId, fullMessage);
+        // 两段式生成·第一段：温度 0 的哨兵模型先做情绪内观（失败静默降级为空），
+        // 结论与"三明治提醒"只拼进发往主模型的这一次输入——会话历史里存的仍是原话，
+        // 不会被内观块和指令污染（RedisChatMemoryStore 的历史来自 ConversationService 持久化的原始消息）。
+        final String styledInput = buildStyledInput(chatInput, emotionInsight.analyze(chatInput));
+        Flux<String> rawFlux = soulComfortService.chatStream(memoryId, styledInput);
 
         emitter.onCompletion(() -> {
             String rawResponse = fullResponse.toString();
-            String cleanResponse = EMOTION_TAG_PATTERN
+            String cleanResponse = IdentityLeakScrubber.scrub(EMOTION_TAG_PATTERN
                     .matcher(SONG_TAG_PATTERN.matcher(rawResponse).replaceAll(""))
-                    .replaceAll("");
+                    .replaceAll(""));
             if (!cleanResponse.isBlank()) {
                 conversationService.appendAssistantMessage(convId, userId, cleanResponse);
             } else {
@@ -283,29 +389,115 @@ public class SoulComfortController {
             return emitter;
         }
 
-        subscribeWithRetry(convId, emitter, memoryId, rawFlux, chatInput, fullResponse,
-                pendingSongTag, songSent, new AtomicInteger(0));
+        subscribeWithRetry(convId, emitter, memoryId, rawFlux, chatInput, styledInput, fullResponse,
+                pendingSongTag, songSent, new AtomicInteger(0), leakScrubber);
 
         return emitter;
     }
 
     /**
+     * 拼接发给主模型的这一次输入：原话 + 内观结论（第一段产出）+ 三明治提醒。
+     * 提醒固定在末尾——上下文的最后几行对输出样式影响最大，让"低声安慰"成为落笔前的最后锚点。
+     */
+    private static String buildStyledInput(String message, String insight) {
+        StringBuilder sb = new StringBuilder(message);
+        if (!insight.isBlank()) {
+            sb.append("\n\n【内观·勿复述本段】").append(insight);
+        }
+        sb.append("\n\n【铁律】先接住他压在话底下的那份情绪再开口；30-120字；低声、带一点忧伤的轻叹；"
+                + "禁止序号清单与整套行动攻略，禁止提外部平台，禁止客服式收尾。");
+        return sb.toString();
+    }
+
+    /** 累积回复是否已滑向助手腔：命中禁词清单，或远超 120 字纪律（超长基本即攻略式长篇） */
+    private static boolean violatesStyle(String accumulated) {
+        return accumulated.length() > STYLE_MAX_LENGTH
+                || ASSISTANT_TONE_PATTERN.matcher(accumulated).find();
+    }
+
+    /** 剥离模型输出的结构标记（情绪/点歌/回复前缀）并做身份清洗，得到可直接展示的纯回复 */
+    private String stripOutputTags(String text) {
+        if (text == null) {
+            return "";
+        }
+        String s = SONG_TAG_PATTERN.matcher(text).replaceAll("");
+        s = EMOTION_TAG_PATTERN.matcher(s).replaceAll("");
+        s = s.replaceFirst("(?m)^\\s*【回复】\\s*", "");
+        return IdentityLeakScrubber.scrub(s).trim();
+    }
+
+    /**
+     * 风格哨兵命中后的自愈：中断本次流式（由调用方 dispose），通知前端清空已渲染的半截清单（reset 事件），
+     * 改用同步模型带"重答"强化指令再生成一次，逐字流式补发。
+     * fullResponse 被整体替换为重生内容，onCompletion 落库/情绪记录/标题都以重生版为准。
+     * 重生成失败时保留原半截内容正常收尾，绝不让连接悬空。
+     */
+    private void regenerateOnStyleViolation(String convId, SseEmitter emitter, String styled,
+                                            IdentityLeakScrubber leakScrubber, StringBuilder fullResponse) {
+        log.info("[风格哨兵] 命中助手腔，中断流式并自动重生成 convId={}", convId);
+        try {
+            sendSseEvent(emitter, "reset", "");
+        } catch (IOException e) {
+            log.warn("发送 reset 事件失败 convId={}", convId, e);
+        }
+        String clean = "";
+        try {
+            String raw = soulComfortService.chat(styled
+                    + "\n【重答】上一版又滑回了列清单、给攻略的助手腔，不合格。这次只说心里话："
+                    + "先轻轻说出他压在话底下的那份难受，陪一陪、抱一抱，不超过120字；不要清单、不要行动步骤、不要客服式收尾。");
+            clean = stripOutputTags(raw);
+        } catch (Exception e) {
+            log.warn("[风格哨兵] 重生成失败 convId={}: {}", convId, e.getMessage());
+        }
+        if (clean.isBlank()) {
+            // 重生成也没救回来：reset 已让前端清空气泡，绝不能留白——
+            // 把被哨兵中断的原文（洗净标记与暂扣尾巴后）整段重新流式发出，宁可略逊色的内容也好过空回复。
+            String original = stripOutputTags(fullResponse.toString() + leakScrubber.flush());
+            if (!original.isBlank()) {
+                fullResponse.setLength(0);
+                fullResponse.append(original);
+                sendStreamText(emitter, original);
+                return;
+            }
+            emitter.complete();
+            return;
+        }
+        fullResponse.setLength(0);
+        fullResponse.append(clean);
+        sendStreamText(emitter, clean);
+    }
+
+    /**
      * 订阅流式 Flux 并做失败兜底：
-     * 1) 正常流式输出 → 逐块转发；
+     * 1) 正常流式输出 → 逐块转发；每块后跑风格哨兵，滑向助手腔立即中断并自动重生成；
      * 2) 流式一句未出即失败 → 先重试一次流式（优先保证流式体验），仍失败再同步兜底一次；
      * 3) 全程无内容 → 发送降级文案。
      */
     private void subscribeWithRetry(String convId, SseEmitter emitter, long memoryId, Flux<String> flux,
-                                    String input, StringBuilder fullResponse, StringBuilder pendingSongTag,
-                                    boolean[] songSent, AtomicInteger retries) {
-        flux.subscribe(
+                                    String input, String styled, StringBuilder fullResponse,
+                                    StringBuilder pendingSongTag,
+                                    boolean[] songSent, AtomicInteger retries, IdentityLeakScrubber leakScrubber) {
+        // 风格哨兵触发中断后，后续所有流式信号（含竞态多到的块、cancel 信号）一律忽略
+        boolean[] styleAborted = {false};
+        Disposable[] subscription = new Disposable[1];
+        subscription[0] = flux.subscribe(
                 chunk -> {
+                    if (styleAborted[0]) {
+                        return;
+                    }
                     try {
                         fullResponse.append(chunk);
                         String cleanChunk = EMOTION_TAG_PATTERN.matcher(chunk).replaceAll("");
-                        String sendChunk = handleSongTag(cleanChunk, emitter, pendingSongTag, songSent);
+                        String sendChunk = leakScrubber.feed(handleSongTag(cleanChunk, emitter, pendingSongTag, songSent));
                         if (!sendChunk.isEmpty()) {
                             sendSseEvent(emitter, null, sendChunk);
+                        }
+                        if (violatesStyle(fullResponse.toString())) {
+                            styleAborted[0] = true;
+                            if (subscription[0] != null) {
+                                subscription[0].dispose();
+                            }
+                            regenerateOnStyleViolation(convId, emitter, styled, leakScrubber, fullResponse);
                         }
                     } catch (IOException e) {
                         log.warn("发送流式数据失败 convId={}", convId, e);
@@ -313,6 +505,9 @@ public class SoulComfortController {
                     }
                 },
                 error -> {
+                    if (styleAborted[0]) {
+                        return;
+                    }
                     log.error("AI流式响应异常 convId={}, 已累积: {}字符", convId, fullResponse.length(), error);
                     try {
                         sendSongFallback(emitter, input, fullResponse.toString(), songSent);
@@ -323,15 +518,16 @@ public class SoulComfortController {
                     if (fullResponse.length() == 0 && retries.getAndIncrement() < 1) {
                         log.warn("流式首次失败，重试流式 convId={}", convId);
                         subscribeWithRetry(convId, emitter, memoryId,
-                                soulComfortService.chatStream(memoryId, input), input,
-                                fullResponse, pendingSongTag, songSent, retries);
+                                soulComfortService.chatStream(memoryId, styled), input, styled,
+                                fullResponse, pendingSongTag, songSent, retries, leakScrubber);
                         return;
                     }
                     if (fullResponse.length() == 0) {
                         try {
-                            String retry = soulComfortService.chatForReport(input);
+                            String retry = soulComfortService.chatForReport(styled);
                             if (retry != null && !retry.isBlank()) {
-                                String clean = EMOTION_TAG_PATTERN.matcher(retry).replaceAll("");
+                                String clean = IdentityLeakScrubber.scrub(
+                                        EMOTION_TAG_PATTERN.matcher(retry).replaceAll(""));
                                 fullResponse.append(clean);
                                 sendSseEvent(emitter, null, clean);
                             }
@@ -348,17 +544,34 @@ public class SoulComfortController {
                             log.warn("发送降级消息失败 convId={}", convId, ex);
                         }
                     }
+                    flushLeakScrubber(emitter, leakScrubber);
                     emitter.complete();
                 },
                 () -> {
+                    if (styleAborted[0]) {
+                        return;
+                    }
                     try {
                         sendSongFallback(emitter, input, fullResponse.toString(), songSent);
                     } catch (IOException e) {
                         log.warn("兜底点歌链接发送失败 convId={}", convId, e);
                     }
+                    flushLeakScrubber(emitter, leakScrubber);
                     emitter.complete();
                 }
         );
+    }
+
+    /** 流结束前释放过滤器中"疑似敏感词前缀"的暂扣尾巴，保证正文完整 */
+    private void flushLeakScrubber(SseEmitter emitter, IdentityLeakScrubber leakScrubber) {
+        String tail = leakScrubber.flush();
+        if (!tail.isEmpty()) {
+            try {
+                sendSseEvent(emitter, null, tail);
+            } catch (IOException e) {
+                log.warn("发送流式收尾内容失败", e);
+            }
+        }
     }
 
     private void sendSseEvent(SseEmitter emitter, String event, String data) throws IOException {

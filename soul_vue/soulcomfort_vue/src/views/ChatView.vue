@@ -119,8 +119,11 @@
 
       <div class="chat-messages" ref="messagesContainer">
         <div v-if="messages.length === 0 && !isStreaming" class="welcome-area">
+          <!-- 未打卡提醒：欢迎页在场时内嵌在小太阳上方（内容流形态，零遮挡），
+               其余场景由 CheckinDialog 的顶部悬浮胶囊兜底 -->
+          <CheckinPill mode="inline" />
           <div class="welcome-icon">
-            <el-icon :size="64" color="#d4a373"><Sunny /></el-icon>
+            <el-icon :size="64" color="#4f8faa"><Sunny /></el-icon>
           </div>
           <h2 class="welcome-title">Hi，我是甜弈 🌿</h2>
           <p class="welcome-desc">
@@ -145,6 +148,7 @@
           :user-name="authStore.nickname"
           :user-avatar="authStore.avatarUrl"
           :is-streaming="index === messages.length - 1 && msg.role === 'assistant' && isStreaming"
+          :kind="msg.kind || ''"
           :index="index"
           @quote="handleQuote"
         />
@@ -168,8 +172,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '../stores/auth.js'
 import MessageBubble from '../components/MessageBubble.vue'
 import ChatInput from '../components/ChatInput.vue'
+import CheckinPill from '../components/CheckinPill.vue'
 import { streamChat } from '../api/chat.js'
 import { applyBgByPanel, applyBgNeutral } from '../composables/useBgLayer.js'
+import { useCheckinReminder } from '../composables/useCheckinReminder.js'
+import { useCareReminder } from '../composables/useCareReminder.js'
 import {
   fetchConversationList,
   fetchConversation,
@@ -195,6 +202,30 @@ const totalConvs = ref(0)
 const panelCollapsed = ref(false)
 const quoteMsg = ref(null)
 
+/* 打卡提醒胶囊接管标志：欢迎页（空会话）可见时内嵌胶囊上场，顶部悬浮胶囊让位，避免双份同屏 */
+const { inlineActive } = useCheckinReminder()
+const welcomeVisible = computed(() => messages.value.length === 0 && !isStreaming.value)
+watch(welcomeVisible, v => { inlineActive.value = v }, { immediate: true })
+
+/* 主动关怀：把当前会话登记给关怀胶囊（点开时"甜弈先开口"优先落进正在看的会话） */
+const { activeConvId, pendingCareMessage } = useCareReminder()
+watch(currentConvId, v => { activeConvId.value = v }, { immediate: true })
+onUnmounted(() => { activeConvId.value = '' })
+
+/* opener 落点就是当前会话时路由不会变化，本地直接补一条 care 消息；
+   落在其他会话时由导航 + 历史加载呈现，这里消费掉即可 */
+watch(pendingCareMessage, data => {
+  if (!data) return
+  pendingCareMessage.value = null
+  if (data.convId !== currentConvId.value) return
+  messages.value.push({
+    role: data.message.role === 'USER' ? 'user' : 'assistant',
+    content: data.message.content,
+    kind: data.message.kind || 'care'
+  })
+  scrollToBottom()
+})
+
 /* 背景联动（算法见 composables/useBgLayer.js）：展开面板→背景收拢进聊天区；折叠→放大填满主内容区。
    离开聊天页时置为中性布局（填满主内容区），避免把聊天收拢态残留到其他模块 */
 function onWindowResize() {
@@ -210,6 +241,8 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', onWindowResize)
   applyBgNeutral()
+  // 离开聊天页：交还提醒胶囊展示权，日记/记录等页面由顶部悬浮兜底形态接手
+  inlineActive.value = false
 })
 
 const quickPrompts = [
@@ -296,7 +329,8 @@ async function switchConversation(convId) {
     if (res.code === 0 && res.data) {
       messages.value = (res.data.messages || []).map(m => ({
         role: m.role === 'USER' ? 'user' : 'assistant',
-        content: m.content
+        content: m.content,
+        kind: m.kind || ''
       }))
       scrollToBottom()
     }
@@ -363,6 +397,30 @@ function handleQuote({ role, content, index }) {
   quoteMsg.value = { role, content, index }
 }
 
+/**
+ * 流结束后同步 AI 自动生成的会话标题到侧栏。
+ * 后端在 SSE 关闭后还要调一次模型生成标题（约 1~3 秒），所以每 2 秒拉一次、最多重试 4 次；
+ * 用户手动改过名（标题已非"新对话"）时直接覆盖为服务端最新值。
+ */
+async function syncConvTitle(convId, attempts = 4) {
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  try {
+    const res = await fetchConversation(convId)
+    if (res.code === 0 && res.data) {
+      const conv = conversations.value.find(c => c.id === convId)
+      if (!conv) return
+      if (res.data.title && res.data.title !== conv.title) {
+        conv.title = res.data.title
+        conv.editTitle = res.data.title
+      } else if (conv.title === '新对话' && attempts > 1) {
+        syncConvTitle(convId, attempts - 1)
+      }
+    }
+  } catch (e) {
+    console.error('同步会话标题失败:', e)
+  }
+}
+
 async function sendMessage(text) {
   if (isStreaming.value) return
 
@@ -397,23 +455,34 @@ async function sendMessage(text) {
     content: ''
   }
   messages.value.push(assistantMsg)
+  // 必须取数组里的响应式代理来改写：直接改上面 push 前的普通对象会绕过
+  // Vue 的 set 拦截，流式期间不触发重渲染，导致回答整段一次性出现
+  const liveMsg = messages.value[messages.value.length - 1]
 
   isStreaming.value = true
 
   const q = quoteMsg.value
   quoteMsg.value = null
 
+  const convIdForTitle = currentConvId.value
+
   try {
     for await (const chunk of streamChat(currentConvId.value, text, q)) {
-      assistantMsg.content += chunk
+      if (chunk && chunk.reset) {
+        // 后端风格哨兵判定回答滑向"助手腔"，已中断并重生成：清掉屏幕上的半截清单
+        liveMsg.content = ''
+        continue
+      }
+      liveMsg.content += chunk
       scrollToBottom()
     }
   } catch (e) {
-    assistantMsg.content = '抱歉，连接出了点问题，请稍后再试... 🍃'
+    liveMsg.content = '抱歉，连接出了点问题，请稍后再试... 🍃'
     console.error('SSE 流读取失败:', e)
   } finally {
     isStreaming.value = false
     scrollToBottom()
+    syncConvTitle(convIdForTitle)
   }
 }
 

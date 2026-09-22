@@ -64,8 +64,8 @@ onUnmounted(() => {
   height: 26px;
   margin-top: 6px;
   border-radius: 2px;
-  background: linear-gradient(180deg, #ffb877 0%, #e8a15a 100%);
-  box-shadow: 0 0 10px rgba(255, 184, 119, 0.4);
+  background: linear-gradient(180deg, #e8a9c1 0%, #4f8faa 100%);
+  box-shadow: 0 0 10px rgba(238,169,201, 0.4);
 }
 
 .quote-text {
@@ -73,7 +73,7 @@ onUnmounted(() => {
   font-size: 16px;
   line-height: 1.8;
   letter-spacing: 1px;
-  color: #6b4a33;
+  color: #6b4560;
   text-shadow: 0 1px 8px rgba(255, 255, 255, 0.7);
 }
 
@@ -93,7 +93,7 @@ onUnmounted(() => {
 }
 
 html.dark .quote-text {
-  color: #d9c3a9;
+  color: #dbc4d4;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 </style>

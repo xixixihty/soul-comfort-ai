@@ -32,33 +32,33 @@
   line-height: 1.35;
   font-weight: 800;
   letter-spacing: 3px;
-  color: #7a4424;
+  color: #7a4466;
   font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
-  background: linear-gradient(120deg, #7a4424 0%, #c97f4a 60%, #d4a373 100%);
+  background: linear-gradient(120deg, #7a4466 0%, #d98bae 60%, #e8a9c1 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 1px 18px rgba(255, 224, 186, 0.6);
+  text-shadow: 0 1px 18px rgba(246,213,226, 0.6);
 }
 
 .hero-sub {
   margin: 0;
   font-size: 15px;
   letter-spacing: 4px;
-  color: #7c5c42;
+  color: #7c5a72;
   text-shadow: 0 1px 10px rgba(255, 255, 255, 0.75);
 }
 
 html.dark .hero-title {
-  background: linear-gradient(120deg, #f2cd9f 0%, #e3a878 60%, #d4a373 100%);
+  background: linear-gradient(120deg, #f2cfe0 0%, #efb7cf 60%, #e8a9c1 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 1px 18px rgba(255, 210, 160, 0.3);
+  text-shadow: 0 1px 18px rgba(232,169,193, 0.3);
 }
 
 html.dark .hero-sub {
-  color: #d9c3a9;
+  color: #dbc4d4;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 </style>

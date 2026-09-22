@@ -101,4 +101,14 @@ public class RedisConstants {
     public static String userCheckinListKey(String userId) {
         return NS + "checkin:index:user:" + userId;
     }
+
+    // ===== 主动关怀（情绪灯塔）=====
+
+    public static String careStateKey(String userId) {
+        return NS + "care:state:" + userId;
+    }
+
+    public static String carePendingKey(String userId) {
+        return NS + "care:pending:" + userId;
+    }
 }

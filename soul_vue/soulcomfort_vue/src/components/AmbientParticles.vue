@@ -13,9 +13,9 @@
 import { ref, onMounted } from 'vue'
 
 const PALETTE = [
-  'rgba(255, 217, 168, 0.9)',
-  'rgba(255, 233, 207, 0.9)',
-  'rgba(255, 196, 138, 0.8)'
+  'rgba(244,205,224, 0.9)',
+  'rgba(248,222,233, 0.9)',
+  'rgba(242,188,214, 0.8)'
 ]
 
 const particles = ref([])

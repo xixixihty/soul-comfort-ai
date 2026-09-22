@@ -30,7 +30,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 3px;
-  color: #7a4424;
+  color: #7a4466;
   font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
   text-shadow: 0 1px 10px rgba(255, 255, 255, 0.75);
 }
@@ -39,16 +39,16 @@
   margin: 0;
   font-size: 12px;
   letter-spacing: 1px;
-  color: #9a8771;
+  color: #a08a9e;
   text-shadow: 0 1px 8px rgba(255, 255, 255, 0.7);
 }
 
 html.dark .cc-title {
-  color: #f0c89a;
+  color: #f6d5e2;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 
 html.dark .cc-sub {
-  color: #84705f;
+  color: #7f6b7f;
 }
 </style>

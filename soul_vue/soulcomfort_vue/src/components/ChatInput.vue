@@ -127,7 +127,7 @@ watch(() => props.quoteMsg, (v) => {
 .message-input :deep(.el-textarea__inner:focus) {
   border-color: var(--accent-color);
   background: var(--bg-card);
-  box-shadow: 0 0 0 3px rgba(212, 163, 115, 0.12);
+  box-shadow: 0 0 0 3px rgba(232,169,193, 0.12);
 }
 
 .send-button {

@@ -85,16 +85,16 @@ onUnmounted(clearPhases)
   height: 66px;
   flex: none;
   border-radius: 50%;
-  border: 1px solid rgba(212, 163, 115, 0.5);
-  box-shadow: 0 0 18px rgba(255, 184, 119, 0.25);
+  border: 1px solid rgba(232,169,193, 0.5);
+  box-shadow: 0 0 18px rgba(238,169,201, 0.25);
 }
 
 .breath-core {
   position: absolute;
   inset: 12px;
   border-radius: 50%;
-  background: radial-gradient(circle, #ffc48a 0%, #ff9d5c 70%);
-  box-shadow: 0 0 14px rgba(255, 157, 92, 0.55);
+  background: radial-gradient(circle, #f6c1da 0%, #e896b9 70%);
+  box-shadow: 0 0 14px rgba(232,150,185, 0.55);
   animation: breathe 14s ease-in-out infinite;
 }
 
@@ -125,7 +125,7 @@ onUnmounted(clearPhases)
   margin: 0 0 4px;
   font-size: 15px;
   letter-spacing: 2px;
-  color: #6b4a33;
+  color: #6b4560;
   font-family: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
   text-shadow: 0 1px 8px rgba(255, 255, 255, 0.7);
 }
@@ -133,17 +133,17 @@ onUnmounted(clearPhases)
 .breath-tip {
   margin: 0;
   font-size: 12px;
-  color: #9a8771;
+  color: #a08a9e;
   letter-spacing: 1px;
 }
 
 html.dark .breath-phase {
-  color: #d9c3a9;
+  color: #dbc4d4;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
 }
 
 html.dark .breath-tip {
-  color: #84705f;
+  color: #7f6b7f;
 }
 
 @media (prefers-reduced-motion: reduce) {

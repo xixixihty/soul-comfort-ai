@@ -55,13 +55,19 @@ const routes = [
     path: '/about',
     name: 'About',
     component: () => import('../views/AboutView.vue'),
-    meta: { title: '关于甜弈' }
+    meta: { standalone: true, title: '关于甜弈' }
   },
   {
     path: '/services',
     name: 'Services',
     component: () => import('../views/ServicesView.vue'),
-    meta: { title: '服务与功能 - 甜弈' }
+    meta: { standalone: true, title: '服务与功能 - 甜弈' }
+  },
+  {
+    path: '/contact',
+    name: 'Contact',
+    component: () => import('../views/ContactView.vue'),
+    meta: { standalone: true, title: '联系开发者 - 甜弈' }
   }
 ]
 

@@ -115,6 +115,15 @@ public class AuthService {
         return withAvatar(userId, LoginResponse.UserInfo.fromUser(user));
     }
 
+    /** 更新个人资料（当前仅昵称）：保存后回读最新用户信息（含头像）供前端同步 */
+    public LoginResponse.UserInfo updateProfile(String userId, String nickname) {
+        User user = authRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(1001, "用户不存在"));
+        user.setNickname(nickname.trim());
+        authRepository.save(user);
+        return getCurrentUser(userId);
+    }
+
     /** 从 Redis 读取用户头像地址并填充到用户信息（头像地址存于 Redis 而非用户表） */
     private LoginResponse.UserInfo withAvatar(String userId, LoginResponse.UserInfo userInfo) {
         userInfo.setAvatarUrl(redis.opsForValue().get(RedisConstants.avatarKey(userId)));

@@ -141,6 +141,20 @@ public class ConversationService {
         conversationRepository.updateConversationTimestamp(convId);
     }
 
+    /** 甜弈主动关怀消息：角色仍是 ASSISTANT（记忆/历史链路零改动），kind 仅供前端渲染"先开口"专属气泡 */
+    public ChatMessageVO appendCareMessage(String convId, String userId, String content) {
+        ChatMessageVO message = ChatMessageVO.builder()
+                .id("m_" + System.currentTimeMillis())
+                .role("ASSISTANT")
+                .content(content)
+                .kind("care")
+                .timestamp(System.currentTimeMillis())
+                .build();
+        conversationRepository.appendMessage(convId, userId, message);
+        conversationRepository.updateConversationTimestamp(convId);
+        return message;
+    }
+
     public void tryGenerateTitle(String convId, String userId) {
         conversationRepository.findById(convId).ifPresent(conv -> {
             if (!"新对话".equals(conv.getTitle())) {
@@ -151,21 +165,36 @@ public class ConversationService {
                 return;
             }
             String userMsg = messages.get(0).getContent();
-            String prompt = "根据以下对话内容，生成一个10字以内的简洁标题，只输出标题，不要任何其他内容：\n用户：" + userMsg;
+            String title = null;
             try {
-                String title = soulComfortService.chatForReport(prompt);
-                if (title != null && !title.isBlank()) {
-                    title = title.replaceAll("[\\n\\r\"'【】]", "").trim();
-                    if (title.length() > 15) {
-                        title = title.substring(0, 15);
-                    }
-                    conversationRepository.updateTitle(convId, title);
-                    log.info("自动生成对话标题 convId={} title={}", convId, title);
-                }
+                title = cleanTitle(soulComfortService.chatForTitle(userMsg));
             } catch (Exception e) {
-                log.warn("自动生成标题失败 convId={}", convId, e.getMessage());
+                log.warn("模型生成标题失败，改用首条消息截取兜底 convId={}: {}", convId, e.getMessage());
+            }
+            // 确定性兜底：模型失败/输出为空时直接截取用户第一句话，保证标题永不卡在"新对话"
+            if (title == null || title.isBlank()) {
+                title = cleanTitle(userMsg);
+            }
+            if (title != null && !title.isBlank()) {
+                if (title.length() > 12) {
+                    title = title.substring(0, 12) + "…";
+                }
+                conversationRepository.updateTitle(convId, title);
+                log.info("自动生成对话标题 convId={} title={}", convId, title);
             }
         });
+    }
+
+    /** 清洗标题：剥离【情绪】标签、引号/书名框、"标题："前缀与换行，收敛为单行短文本 */
+    private String cleanTitle(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String t = raw.replaceAll("【情绪】\\s*\\w+", "")
+                .replaceAll("^[\"'“”「『【\\s]*标题[:：]?\\s*", "")
+                .replaceAll("[\\n\\r\"'“”‘’【】]+", "")
+                .trim();
+        return t.length() > 15 ? t.substring(0, 15) : t;
     }
 
     public Map<String, Object> revokeMessage(String convId, String userId, String messageId) {

@@ -27,7 +27,7 @@
 
     <div class="conv-list" v-loading="loading">
       <div v-if="conversations.length === 0 && !loading" class="empty-state">
-        <el-icon :size="48" color="#d4a373"><ChatDotRound /></el-icon>
+        <el-icon :size="48" color="#e8a9c1"><ChatDotRound /></el-icon>
         <p v-if="activeTag">该标签下还没有对话</p>
         <p v-else>还没有对话记录，去和甜弈聊聊吧</p>
         <el-button type="primary" @click="$router.push('/')">开始聊天</el-button>

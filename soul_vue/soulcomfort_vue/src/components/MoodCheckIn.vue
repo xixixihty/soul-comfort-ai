@@ -61,7 +61,7 @@ function pick(label) {
   margin: 0 0 10px;
   font-size: 12px;
   letter-spacing: 2px;
-  color: #9a8771;
+  color: #a08a9e;
   text-shadow: 0 1px 8px rgba(255, 255, 255, 0.7);
 }
 
@@ -78,7 +78,7 @@ function pick(label) {
   padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: 12px;
-  background: rgba(255, 251, 244, 0.5);
+  background: rgba(251,244,247, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   cursor: pointer;
@@ -94,12 +94,12 @@ function pick(label) {
 
 .mood-label {
   font-size: 11px;
-  color: #9a8771;
+  color: #a08a9e;
 }
 
 .mood-btn:hover {
   transform: translateY(-3px);
-  background: rgba(255, 251, 244, 0.75);
+  background: rgba(251,244,247, 0.75);
 }
 
 .mood-btn:hover .mood-icon {
@@ -108,9 +108,9 @@ function pick(label) {
 }
 
 .mood-btn--active {
-  border-color: rgba(255, 157, 92, 0.65);
-  background: rgba(255, 224, 186, 0.55);
-  box-shadow: 0 4px 14px rgba(255, 157, 92, 0.28);
+  border-color: rgba(232,150,185, 0.65);
+  background: rgba(246,213,226, 0.55);
+  box-shadow: 0 4px 14px rgba(232,150,185, 0.28);
 }
 
 .mood-btn--active .mood-icon {
@@ -119,7 +119,7 @@ function pick(label) {
 }
 
 .mood-btn--active .mood-label {
-  color: #8a4b2e;
+  color: #a65b80;
   font-weight: 600;
 }
 
@@ -127,32 +127,32 @@ function pick(label) {
   margin: 8px 0 0;
   font-size: 12px;
   letter-spacing: 1px;
-  color: #8a4b2e;
+  color: #a65b80;
   transition: color 0.3s;
 }
 
 .mood-result.is-empty {
-  color: #b39d87;
+  color: #b39dac;
 }
 
 html.dark .mood-caption,
 html.dark .mood-result.is-empty {
-  color: #84705f;
+  color: #7f6b7f;
 }
 
 html.dark .mood-btn {
-  background: rgba(42, 33, 27, 0.6);
+  background: rgba(44,35,48, 0.6);
 }
 
 html.dark .mood-label {
-  color: #a08a6f;
+  color: #a08a9a;
 }
 
 html.dark .mood-btn--active .mood-label {
-  color: #f0c89a;
+  color: #f6d5e2;
 }
 
 html.dark .mood-result {
-  color: #e0b790;
+  color: #f0c7d8;
 }
 </style>

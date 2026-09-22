@@ -1,8 +1,10 @@
 import { useAuthStore } from '@/stores/auth'
 
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
 export async function* streamChat(convId, message, quoteMsg) {
   const authStore = useAuthStore()
-  let url = `/api/soulComfort/chat?convId=${convId}&message=${encodeURIComponent(message)}`
+  let url = `${API_BASE}/soulComfort/chat?convId=${convId}&message=${encodeURIComponent(message)}`
   if (quoteMsg) {
     url += `&quoteMessage=${encodeURIComponent(quoteMsg.message)}&quoteRole=${encodeURIComponent(quoteMsg.role)}`
   }
@@ -53,7 +55,10 @@ export async function* streamChat(convId, message, quoteMsg) {
         }
         if (trimmed.startsWith('data:')) {
           const data = trimmed.substring(5).trim()
-          if (data && (!currentEvent || currentEvent === 'message')) {
+          if (currentEvent === 'reset') {
+            // 风格哨兵命中：后端已中断本次生成并准备重答，通知视图层清空已渲染的半截回答
+            yield { reset: true }
+          } else if (data && (!currentEvent || currentEvent === 'message')) {
             // 后端将载荷包装为 {"content":"..."}（换行被转义为字面 \n，保护 SSE 协议）。
             // 此处解析还原；解析失败（历史/旧格式）时按原样透传。
             try {

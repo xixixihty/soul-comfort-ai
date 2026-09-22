@@ -18,6 +18,8 @@ public class ChatMessageVO {
     private String role;
     private String content;
     private String emotion;
+    /** 消息种类：null=普通聊天，"care"=甜弈主动关怀（先开口/拆星寄语） */
+    private String kind;
     private long timestamp;
     private boolean revoked;
     @Builder.Default

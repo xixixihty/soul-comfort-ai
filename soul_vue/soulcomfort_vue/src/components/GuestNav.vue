@@ -45,12 +45,12 @@ function go(path) {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  border: 1px solid rgba(212, 163, 115, 0.4);
+  border: 1px solid rgba(232,169,193, 0.4);
   border-radius: 999px;
-  background: rgba(255, 251, 244, 0.5);
+  background: rgba(251,244,247, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  color: #7c5c42;
+  color: #7c5a72;
   font-size: 13px;
   letter-spacing: 1px;
   cursor: pointer;
@@ -63,11 +63,11 @@ function go(path) {
 }
 
 .nav-capsule:hover {
-  background: rgba(255, 138, 61, 0.78);
+  background: rgba(224,144,180, 0.78);
   border-color: rgba(255, 255, 255, 0.5);
   color: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 130, 40, 0.3);
+  box-shadow: 0 4px 12px rgba(216,130,170, 0.3);
 }
 
 .nav-capsule:hover .nav-arrow {
@@ -75,9 +75,9 @@ function go(path) {
 }
 
 html.dark .nav-capsule {
-  background: rgba(42, 33, 27, 0.6);
-  border-color: rgba(212, 163, 115, 0.28);
-  color: #d9c3a9;
+  background: rgba(44,35,48, 0.6);
+  border-color: rgba(232,169,193, 0.28);
+  color: #dbc4d4;
 }
 
 html.dark .nav-capsule:hover {

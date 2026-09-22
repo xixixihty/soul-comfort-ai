@@ -1,13 +1,16 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    title="今日心情打卡"
-    width="420px"
-    :close-on-click-modal="false"
-    align-center
-    class="checkin-dialog"
-    @closed="markDismissed"
-  >
+  <div>
+    <!-- 悬浮兜底胶囊（欢迎页时让位给 ChatView 里的内嵌形态） -->
+    <CheckinPill mode="fixed" />
+    <el-dialog
+      v-model="dialogVisible"
+      title="今日心情打卡"
+      width="420px"
+      :close-on-click-modal="false"
+      align-center
+      class="checkin-dialog"
+      @closed="onDialogClosed"
+    >
     <div class="checkin-body">
       <p class="checkin-subtitle">今天你的心情怎么样？</p>
       <div class="emotion-options">
@@ -38,41 +41,38 @@
         打卡
       </el-button>
     </template>
-  </el-dialog>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { doCheckin, fetchTodayCheckin } from '../api/checkin'
+import CheckinPill from './CheckinPill.vue'
+import { useCheckinReminder } from '../composables/useCheckinReminder.js'
 
-const visible = ref(false)
+const {
+  dialogVisible,
+  dismissedRecently,
+  markDismissed,
+  clearDismiss,
+  showPill,
+  hidePill
+} = useCheckinReminder()
+
 const selected = ref('')
 const note = ref('')
 const submitting = ref(false)
+let justChecked = false
 
-/** 当天日期（本地时间）作为"已跳过打卡"标记的键，次日自然失效 */
-const DISMISS_KEY = 'checkin_dismiss_date'
-
-function todayStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-/** 今天是否已被用户关闭过（X / 跳过 / ESC 任一方式），关闭后当天不再打扰 */
-function dismissedToday() {
-  try {
-    return localStorage.getItem(DISMISS_KEY) === todayStr()
-  } catch {
-    return false
+/* 每次打开弹窗（自动弹/胶囊点开的入口都汇聚到这里）重置选择，保证是全新一次打卡 */
+watch(dialogVisible, (v) => {
+  if (v) {
+    selected.value = ''
+    note.value = ''
   }
-}
-
-function markDismissed() {
-  try {
-    localStorage.setItem(DISMISS_KEY, todayStr())
-  } catch {}
-}
+})
 
 const emotionOptions = [
   { value: 'happy', emoji: '😊', label: '开心' },
@@ -86,16 +86,34 @@ const emotionOptions = [
 ]
 
 async function tryShow() {
-  // 用户当天已关闭过（X/跳过/ESC）→ 切页回来也不再弹出，避免反复打扰
-  if (dismissedToday()) return
   try {
     const res = await fetchTodayCheckin()
-    if (res.code === 0 && res.data && !res.data.checked) {
-      selected.value = ''
-      note.value = ''
-      visible.value = true
+    const checked = res.code === 0 && res.data && res.data.checked
+    if (checked) {
+      // 已打卡：清除一切提醒状态
+      hidePill()
+      clearDismiss()
+      return
     }
+    // 未打卡：冷却期内不再自动弹窗打扰，只挂提醒胶囊（8 秒后自动淡出，
+    // 淡出不记冷却，下次切页仍会再提醒）；冷却结束后进聊天页重新弹出打卡窗
+    if (dismissedRecently()) {
+      showPill()
+      return
+    }
+    dialogVisible.value = true
   } catch {}
+}
+
+function onDialogClosed() {
+  if (justChecked) {
+    justChecked = false
+    hidePill()
+    clearDismiss()
+    return
+  }
+  markDismissed()
+  showPill()
 }
 
 async function handleSubmit() {
@@ -104,7 +122,8 @@ async function handleSubmit() {
   try {
     await doCheckin(selected.value, note.value.trim())
     ElMessage.success('打卡成功！今天也要开心哦 🌿')
-    visible.value = false
+    justChecked = true
+    dialogVisible.value = false
   } catch {
     ElMessage.error('打卡失败，请稍后重试')
   } finally {
@@ -113,7 +132,7 @@ async function handleSubmit() {
 }
 
 function handleSkip() {
-  visible.value = false
+  dialogVisible.value = false
 }
 
 defineExpose({ tryShow })

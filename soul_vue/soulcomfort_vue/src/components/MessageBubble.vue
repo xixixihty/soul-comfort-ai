@@ -1,5 +1,5 @@
 <template>
-  <div class="message-bubble" :class="[role]">
+  <div class="message-bubble" :class="[role, { care: kind === 'care' }]">
     <div class="avatar-area">
       <!-- 甜弈头像：从背景图裁剪人脸（人物位于画面 50% 48%），点击放大预览 -->
       <div v-if="role === 'assistant'" class="tianyi-avatar" title="点击查看大头像" @click="showPreview = true"></div>
@@ -17,16 +17,23 @@
       </el-avatar>
     </div>
     <div class="content-area">
-      <div class="sender-name">{{ role === 'user' ? userName : '甜弈' }}</div>
+      <div class="sender-name">
+        {{ role === 'user' ? userName : '甜弈' }}
+        <span v-if="kind === 'care'" class="care-badge"> 甜♥弈 </span>
+      </div>
       <div class="bubble-row">
         <div class="bubble-text" :class="{ 'bubble-text--streaming': role === 'assistant' && isStreaming }">
           <span v-html="renderedContent"></span>
-          <div v-if="role === 'assistant' && isStreaming" class="typing-indicator">
+          <div v-if="role === 'assistant' && isStreaming && !content" class="thinking-placeholder">
+            <span class="thinking-text">努力思考中</span>
+            <span class="thinking-dots"><i></i><i></i><i></i></span>
+          </div>
+          <div v-if="role === 'assistant' && isStreaming && content" class="typing-indicator">
             <span></span><span></span><span></span>
           </div>
         </div>
         <el-button
-          v-if="!isStreaming"
+          v-if="!isStreaming && kind !== 'care'"
           :icon="ChatLineSquare"
           circle
           text
@@ -88,11 +95,15 @@ const props = defineProps({
   index: {
     type: Number,
     default: -1
+  },
+  kind: {
+    type: String,
+    default: ''
   }
 })
 
 const avatarColor = computed(() => {
-  return '#f2b08c'
+  return '#e8a9c1'
 })
 
 /* Markdown 渲染：html:false 天然转义原始 HTML（防 XSS），breaks 保留单换行行为 */
@@ -146,8 +157,8 @@ const renderedContent = computed(() => {
   background-size: 265% auto;
   background-position: 50% 48%;
   background-repeat: no-repeat;
-  border: 2px solid #cfe8f8;
-  box-shadow: 0 0 0 3px rgba(207, 232, 248, 0.35), var(--shadow);
+  border: 2px solid #d3e6ee;
+  box-shadow: 0 0 0 3px rgba(211,230,238, 0.35), var(--shadow);
   cursor: pointer;
   transition: transform 0.2s ease;
 }
@@ -182,7 +193,7 @@ const renderedContent = computed(() => {
 }
 
 html.dark .avatar-preview-card {
-  background: #2b241d;
+  background: #2b2230;
 }
 
 /* 甜弈大头像：与消息缩略头像同比例放大裁切 */
@@ -194,8 +205,8 @@ html.dark .avatar-preview-card {
   background-size: 265% auto;
   background-position: 50% 48%;
   background-repeat: no-repeat;
-  border: 3px solid #cfe8f8;
-  box-shadow: 0 0 0 4px rgba(207, 232, 248, 0.5);
+  border: 3px solid #d3e6ee;
+  box-shadow: 0 0 0 4px rgba(211,230,238, 0.5);
 }
 
 .avatar-preview-box {
@@ -203,11 +214,11 @@ html.dark .avatar-preview-card {
   height: 140px;
   border-radius: 50%;
   overflow: hidden;
-  background: #f0ebe4;
+  background: #f0e8ee;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #b8a894;
+  color: #b8a8b2;
   border: 3px solid var(--border-color);
 }
 
@@ -362,6 +373,36 @@ html.dark .avatar-preview-card {
   box-shadow: var(--shadow);
 }
 
+/* 回访关怀（甜弈先开口）：月光蓝左侧竖条 + 冷调气泡底，与普通回复区分 */
+.message-bubble.care .bubble-text {
+  padding-left: 24px;
+  background: linear-gradient(135deg, #eef5f9, #e3edf4);
+}
+
+html.dark .message-bubble.care .bubble-text {
+  background: linear-gradient(135deg, #2a3140, #303c4e);
+}
+
+.message-bubble.care .bubble-text::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #4f8faa, #6f7fae);
+}
+
+.care-badge {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(135deg, #4f8faa, #6f7fae);
+}
+
 .quote-btn {
   opacity: 0;
   transition: opacity 0.2s;
@@ -376,6 +417,45 @@ html.dark .avatar-preview-card {
 .quote-btn:hover {
   color: var(--accent-color);
   background: var(--bg-quote);
+}
+
+/* 等待首token/哨兵重答间隙：气泡内显示"努力思考中"+跳动三点，避免空荡气泡 */
+.thinking-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.thinking-text {
+  font-size: 13px;
+  animation: thinkingBreath 2s ease-in-out infinite;
+}
+
+.thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.thinking-dots i {
+  width: 5px;
+  height: 5px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.thinking-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes thinkingBreath {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
 .typing-indicator {

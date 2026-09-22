@@ -13,9 +13,9 @@
 
 <script setup>
 const features = [
-  { label: 'AI 倾听', color: '#ff9d5c' },
-  { label: '情绪日记', color: '#e8a15a' },
-  { label: '心情音乐', color: '#ffc48a' }
+  { label: 'AI 倾听', color: '#e896b9' },
+  { label: '情绪日记', color: '#ea9ec0' },
+  { label: '心情音乐', color: '#f6c1da' }
 ]
 </script>
 
@@ -44,15 +44,15 @@ const features = [
   gap: 8px;
   padding: 8px 16px;
   border-radius: 999px;
-  background: rgba(255, 251, 244, 0.55);
-  border: 1px solid rgba(212, 163, 115, 0.35);
-  color: #7c5c42;
+  background: rgba(251,244,247, 0.55);
+  border: 1px solid rgba(232,169,193, 0.35);
+  color: #7c5a72;
   font-size: 13px;
   letter-spacing: 1px;
   --el-bg-color: transparent;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 2px 8px rgba(180, 120, 80, 0.1);
+  box-shadow: 0 2px 8px rgba(175,120,150, 0.1);
   transition: all 0.3s;
 }
 
@@ -64,11 +64,11 @@ const features = [
 }
 
 .pill:hover {
-  background: rgba(255, 138, 61, 0.78);
+  background: rgba(224,144,180, 0.78);
   border-color: rgba(255, 255, 255, 0.5);
   color: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 130, 40, 0.3);
+  box-shadow: 0 4px 12px rgba(216,130,170, 0.3);
 }
 
 .pill:hover .pill-dot {
@@ -76,9 +76,9 @@ const features = [
 }
 
 html.dark .pill {
-  background: rgba(42, 33, 27, 0.6);
-  border-color: rgba(212, 163, 115, 0.28);
-  color: #d9c3a9;
+  background: rgba(44,35,48, 0.6);
+  border-color: rgba(232,169,193, 0.28);
+  color: #dbc4d4;
 }
 
 html.dark .pill:hover {

@@ -1,10 +1,10 @@
 <template>
-  <div class="bg-layer" aria-hidden="true"></div>
-  <router-view v-if="$route.meta.guest" />
+  <div class="bg-layer" :class="{ 'bg-layer--breathing': bgBreathing }" aria-hidden="true"></div>
+  <router-view v-if="$route.meta.guest || $route.meta.standalone" />
   <div v-else class="app-layout" :class="{ 'app-layout--dark': isDark }">
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <LogoMark :size="28" />
+        <LogoMark :size="28" :mood="careTrend" />
         <span class="logo-text">甜弈</span>
       </div>
 
@@ -29,18 +29,11 @@
 
       <div class="sidebar-footer">
         <div class="sidebar-user" v-if="authStore.isLoggedIn">
-          <div class="sidebar-avatar" @click="triggerAvatarUpload" title="点击更换头像">
+          <div class="sidebar-avatar" @click="profileVisible = true" title="个人中心">
             <img v-if="authStore.avatarUrl" :src="authStore.avatarUrl" alt="头像" />
             <el-icon v-else :size="18"><UserFilled /></el-icon>
           </div>
-          <span class="user-nickname">{{ authStore.nickname }}</span>
-          <input
-            ref="avatarInput"
-            type="file"
-            accept="image/*"
-            class="avatar-input-hidden"
-            @change="handleAvatarChange"
-          />
+          <span class="user-nickname" @click="profileVisible = true" title="个人中心">{{ authStore.nickname }}</span>
           <el-button
             :icon="isDark ? Sunny : Moon"
             circle
@@ -66,24 +59,32 @@
 
     <main class="main-content">
       <CheckinDialog ref="checkinDialogRef" />
+      <ProfileDialog v-model="profileVisible" />
+      <CarePill />
       <router-view />
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ChatDotRound, List, Notebook, Calendar, UserFilled, SwitchButton, Sunny, Moon } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { useAuthStore } from './stores/auth'
 import CheckinDialog from './components/CheckinDialog.vue'
+import ProfileDialog from './components/ProfileDialog.vue'
+import CarePill from './components/CarePill.vue'
 import LogoMark from './components/LogoMark.vue'
 import { applyBgNeutral, resetBg } from './composables/useBgLayer.js'
 import { useTheme } from './composables/useTheme.js'
+import { useCareReminder } from './composables/useCareReminder.js'
 
 const authStore = useAuthStore()
 const route = useRoute()
+
+/* 主动关怀（情绪灯塔）：登录态变化与回到聊天页时刷新趋势/关怀卡 */
+const { careTrend, refreshCare } = useCareReminder()
 
 const checkinDialogRef = ref(null)
 
@@ -96,13 +97,32 @@ function toggleDark() {
 
 onMounted(() => {
   initTheme()
+  document.addEventListener('click', onDocumentClick)
 })
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
+
+/* 背景呼吸效果：默认关闭，点击页面空白处开启/停止（点到交互元素上不算） */
+const bgBreathing = ref(false)
+
+function onDocumentClick(e) {
+  const t = e.target
+  if (
+    t &&
+    typeof t.closest === 'function' &&
+    t.closest(
+      'a, button, input, textarea, select, [role="button"], [contenteditable="true"], .sidebar-avatar, .user-nickname, .el-overlay, .el-dialog, .el-message, .el-message-box, .el-popper, .el-image-viewer__wrapper'
+    )
+  ) {
+    return
+  }
+  bgBreathing.value = !bgBreathing.value
+}
 
 /* 背景区域随路由/登录态同步：
    登录页等嘉宾路由 → 恢复默认铺满；非聊天页 → 背景填满主内容区（侧边栏不占用背景区域）；
    聊天页由 ChatView 自行管理展开/收拢联动，此处不干预 */
 function syncBgWithRoute() {
-  if (route.meta.guest || !authStore.isLoggedIn) {
+  if (route.meta.guest || route.meta.standalone || !authStore.isLoggedIn) {
     resetBg()
     return
   }
@@ -114,40 +134,17 @@ function syncBgWithRoute() {
 watch(() => route.path, () => {
   if (authStore.isLoggedIn && route.path === '/') {
     setTimeout(() => checkinDialogRef.value?.tryShow(), 500)
+    refreshCare()
   }
   syncBgWithRoute()
 }, { immediate: true })
 
 watch(() => authStore.isLoggedIn, () => {
   syncBgWithRoute()
+  if (authStore.isLoggedIn) refreshCare()
 }, { immediate: true })
 
-const avatarInput = ref(null)
-
-function triggerAvatarUpload() {
-  avatarInput.value?.click()
-}
-
-/** 头像上传：文件交后端存阿里云 OSS，成功后将返回地址写入本地用户信息并即时更新侧边栏 */
-async function handleAvatarChange(e) {
-  const file = e.target.files?.[0]
-  e.target.value = ''
-  if (!file) return
-  if (!file.type.startsWith('image/')) {
-    ElMessage.warning('请选择图片文件')
-    return
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    ElMessage.warning('图片大小不能超过 5MB')
-    return
-  }
-  try {
-    await authStore.uploadAvatar(file)
-    ElMessage.success('头像更新成功')
-  } catch (err) {
-    ElMessage.error(err.message || '头像上传失败')
-  }
-}
+const profileVisible = ref(false)
 
 async function handleLogout() {
   try {
@@ -194,8 +191,12 @@ async function handleLogout() {
   background-position: center;
   background-repeat: no-repeat;
   transform-origin: 52% 48%;
-  animation: bg-breathe 14s ease-in-out infinite;
   will-change: transform;
+}
+
+/* 呼吸效果默认关闭：仅当点击空白处开启（bg-layer--breathing）后播放 */
+.bg-layer--breathing::before {
+  animation: bg-breathe 14s ease-in-out infinite;
 }
 
 @keyframes bg-breathe {
@@ -211,6 +212,9 @@ async function handleLogout() {
          ② 夜间呼吸改为「亮度脉动 + 轻微缩放」双维动画，让呼吸感在暗色下清晰可感知。 */
 html.dark .bg-layer::before {
   filter: brightness(0.42) saturate(0.45);
+}
+
+html.dark .bg-layer--breathing::before {
   animation-name: bg-breathe-dark;
 }
 
@@ -224,8 +228,9 @@ html.dark .bg-layer::before {
   .bg-layer {
     transition: none;
   }
-  .bg-layer::before {
-    animation: none;
+  .bg-layer::before,
+  .bg-layer--breathing::before {
+    animation: none !important;
   }
 }
 
@@ -332,16 +337,18 @@ html.dark .bg-layer::before {
   object-fit: cover;
 }
 
-.avatar-input-hidden {
-  display: none;
-}
-
 .user-nickname {
   flex: 1;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.user-nickname:hover {
+  color: var(--accent-color);
 }
 
 .theme-btn {
@@ -380,75 +387,120 @@ body {
 }
 
 :root {
-  --bg-primary: #faf5ed;
-  --bg-veil: linear-gradient(180deg, rgba(253, 246, 238, 0.72) 0%, rgba(253, 246, 238, 0.56) 45%, rgba(252, 238, 226, 0.5) 100%);
-  --bg-sidebar: linear-gradient(180deg, #fff8f0 0%, #fffdf9 100%);
-  --bg-hover: #faf0e2;
-  --bg-active: #f5e6d5;
-  --bg-card: rgba(250, 247, 242, 0.92);
-  --bg-input: #faf7f2;
-  --bg-bubble-user: linear-gradient(135deg, #f5b48c, #f7c8a8);
-  --bg-bubble-assistant: linear-gradient(135deg, #fff8f0, #ffecd2);
-  --bg-chat-area: rgba(255, 253, 249, 0.72);
-  --bg-chat-header: rgba(254, 251, 246, 0.85);
-  --bg-conv-item: #faf7f2;
-  --bg-conv-item-hover: #f5ede0;
-  --bg-quote: #fdf2e9;
-  --bg-note: #f5f0eb;
-  --bg-note-hover: #f0e6dc;
+  --bg-primary: #f4e8ec;
+  --bg-veil: linear-gradient(180deg, rgba(246,237,239, 0.6) 0%, rgba(246,237,239, 0.42) 45%, rgba(250,240,245, 0.36) 100%);
+  --bg-sidebar: linear-gradient(180deg, #f9eef3 0%, #fdf7fa 100%);
+  --bg-hover: #f0d9e4;
+  --bg-active: #e9cbda;
+  --bg-card: rgba(252, 248, 251, 0.94);
+  --bg-input: #f9eaf1;
+  --bg-bubble-user: linear-gradient(135deg, #e193b4, #eeb7cd);
+  --bg-bubble-assistant: linear-gradient(135deg, #ffffff, #dfeaf1);
+  --bg-chat-area: rgba(255, 252, 253, 0.74);
+  --bg-chat-header: rgba(250, 241, 246, 0.88);
+  --bg-conv-item: #f9eef3;
+  --bg-conv-item-hover: #f0d9e4;
+  --bg-quote: #dfeaf1;
+  --bg-note: #f3e6ec;
+  --bg-note-hover: #e9cbda;
   --bg-tag: #fff;
-  --bg-tag-hover: #f5f0eb;
-  --bg-tag-active: #f0e6dc;
-  --text-primary: #5c3d2e;
-  --text-secondary: #8b6b5a;
-  --text-muted: #c8b8a8;
-  --border-color: #f0e6dc;
-  --accent-color: #d4a373;
-  --accent-gradient: linear-gradient(135deg, #fa9e6c, #d4a373);
-  --accent-gradient-hover: linear-gradient(135deg, #f08a4a, #c98d5a);
-  --accent-gradient-disabled: linear-gradient(135deg, #e07a3a, #b87d4a);
-  --shadow: 0 2px 8px rgba(180, 120, 80, 0.08);
-  --chart-bg: #faf7f2;
-  --stat-bg: linear-gradient(135deg, #faf7f2, #f5ede0);
-  --gradient-primary: linear-gradient(135deg, #faf5ed 0%, #fff8f0 50%, #fdf8f0 100%);
-  --gradient-chat: linear-gradient(180deg, rgba(255, 248, 240, 0.85), rgba(255, 253, 249, 0.7));
-  --error-color: #e88b7a;
+  --bg-tag-hover: #f0d9e4;
+  --bg-tag-active: #e9cbda;
+  --text-primary: #422f3f;
+  --text-secondary: #6f5369;
+  --text-muted: #ab8fa6;
+  --border-color: #e3c9d6;
+  /* 品牌三色：粉 #E8A9C1 / 蓝 #4F8FAA / 白 #F6EDEF */
+  --accent-pink: #e8a9c1;
+  --accent-pink-deep: #b05f83;
+  --accent-pink-soft: #f2c6d8;
+  --accent-blue: #4f8faa;
+  --accent-blue-deep: #3c7690;
+  --accent-blue-soft: #a9cbd9;
+  --accent-color: #b05f83;
+  --accent-gradient: linear-gradient(135deg, #de93b4, #4f8faa);
+  --accent-gradient-hover: linear-gradient(135deg, #d07fa4, #3c7690);
+  --accent-gradient-disabled: linear-gradient(135deg, #eecddd, #b8d2dd);
+  --shadow: 0 2px 8px rgba(150, 90, 120, 0.14);
+  --chart-bg: #f9eef3;
+  --stat-bg: linear-gradient(135deg, #f9eef3, #eed8e2);
+  --gradient-primary: linear-gradient(135deg, #f4e8ec 0%, #f9eef3 50%, #e6f0f5 100%);
+  --gradient-chat: linear-gradient(180deg, rgba(250,241,246, 0.85), rgba(255, 252, 253, 0.72));
+  --error-color: #d05f72;
+
+  /* Element Plus 主题跟随品牌色：交互主色用蓝，避免默认科技蓝串色 */
+  --el-color-primary: #4f8faa;
+  --el-color-primary-light-3: #7fb2cb;
+  --el-color-primary-light-5: #a9cbd9;
+  --el-color-primary-light-7: #cfe1e9;
+  --el-color-primary-light-8: #e0ebf0;
+  --el-color-primary-light-9: #eff5f8;
+  --el-color-primary-dark-2: #3c7690;
+  --el-color-danger: #de7f8e;
+  --el-color-danger-light-3: #e8a1ac;
+  --el-color-danger-light-5: #f0bec6;
+  --el-color-danger-light-7: #f7d9dd;
+  --el-color-danger-light-8: #fae7ea;
+  --el-color-danger-light-9: #fdf3f4;
+  --el-color-danger-dark-2: #c96373;
 }
 
 html.dark {
-  --bg-primary: #211a15;
-  --bg-veil: linear-gradient(180deg, rgba(33, 26, 21, 0.5) 0%, rgba(33, 26, 21, 0.38) 100%);
-  --bg-sidebar: linear-gradient(180deg, #261e18 0%, #211a15 100%);
-  --bg-hover: #32271f;
-  --bg-active: #3f3228;
-  --bg-card: rgba(42, 33, 27, 0.92);
-  --bg-input: #2a211b;
-  --bg-bubble-user: linear-gradient(135deg, #a0673f, #c08a5e);
-  --bg-bubble-assistant: linear-gradient(135deg, #2f251d, #3a2e24);
-  --bg-chat-area: rgba(33, 26, 21, 0.72);
-  --bg-chat-header: rgba(37, 29, 23, 0.85);
-  --bg-conv-item: #2a211b;
-  --bg-conv-item-hover: #32271f;
-  --bg-quote: #3a2e24;
-  --bg-note: #2a211b;
-  --bg-note-hover: #32271f;
-  --bg-tag: #2a211b;
-  --bg-tag-hover: #32271f;
-  --bg-tag-active: #4a3a2c;
-  --text-primary: #f0e0ce;
-  --text-secondary: #c7b2a0;
-  --text-muted: #84705f;
-  --border-color: #362a1f;
-  --accent-color: #d4a373;
-  --accent-gradient: linear-gradient(135deg, #e08a5a, #c98d5a);
-  --accent-gradient-hover: linear-gradient(135deg, #d07a4a, #b87d4a);
-  --accent-gradient-disabled: linear-gradient(135deg, #9c6a3a, #8a6a48);
+  --bg-primary: #221b23;
+  --bg-veil: linear-gradient(180deg, rgba(34,27,35, 0.5) 0%, rgba(34,27,35, 0.38) 100%);
+  --bg-sidebar: linear-gradient(180deg, #2a2130 0%, #221b23 100%);
+  --bg-hover: #3a2d40;
+  --bg-active: #4a3750;
+  --bg-card: rgba(44,35,48, 0.92);
+  --bg-input: #2c2330;
+  --bg-bubble-user: linear-gradient(135deg, #b06a8c, #c98aab);
+  --bg-bubble-assistant: linear-gradient(135deg, #2a2e3a, #33404f);
+  --bg-chat-area: rgba(34,27,35, 0.72);
+  --bg-chat-header: rgba(39,31,43, 0.85);
+  --bg-conv-item: #2c2330;
+  --bg-conv-item-hover: #3a2d40;
+  --bg-quote: #2e3140;
+  --bg-note: #2c2330;
+  --bg-note-hover: #3a2d40;
+  --bg-tag: #2c2330;
+  --bg-tag-hover: #3a2d40;
+  --bg-tag-active: #4a3848;
+  --text-primary: #f4e7f0;
+  --text-secondary: #d3bccd;
+  --text-muted: #9a829a;
+  --border-color: #463751;
+  --accent-pink: #e8a9c1;
+  --accent-pink-deep: #da9cba;
+  --accent-pink-soft: #7a4466;
+  --accent-blue: #7fb2cb;
+  --accent-blue-deep: #5d95b2;
+  --accent-blue-soft: #2e3140;
+  --accent-color: #e8a9c1;
+  --accent-gradient: linear-gradient(135deg, #c2708f, #4f8faa);
+  --accent-gradient-hover: linear-gradient(135deg, #d08fae, #5d95b2);
+  --accent-gradient-disabled: linear-gradient(135deg, #7a4466, #355666);
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  --chart-bg: #2a211b;
-  --stat-bg: linear-gradient(135deg, #2a211b, #32271f);
-  --gradient-primary: linear-gradient(135deg, #211a15 0%, #261e18 50%, #211a15 100%);
-  --gradient-chat: linear-gradient(180deg, rgba(37, 29, 23, 0.85), rgba(33, 26, 21, 0.7));
-  --error-color: #e88b7a;
+  --chart-bg: #2c2330;
+  --stat-bg: linear-gradient(135deg, #2c2330, #342838);
+  --gradient-primary: linear-gradient(135deg, #221b23 0%, #2a2130 50%, #221b23 100%);
+  --gradient-chat: linear-gradient(180deg, rgba(39,31,43, 0.85), rgba(34,27,35, 0.7));
+  --error-color: #e8999f;
+
+  /* 暗色下 Element 主色提一档亮度保证对比度 */
+  --el-color-primary: #6fa3bc;
+  --el-color-primary-light-3: #8db8cc;
+  --el-color-primary-light-5: #5d8ba1;
+  --el-color-primary-light-7: #3c5b6a;
+  --el-color-primary-light-8: #314956;
+  --el-color-primary-light-9: #283945;
+  --el-color-primary-dark-2: #5d8ba1;
+  --el-color-danger: #e8999f;
+  --el-color-danger-light-3: #c97f85;
+  --el-color-danger-light-5: #8a5a5f;
+  --el-color-danger-light-7: #55393d;
+  --el-color-danger-light-8: #463033;
+  --el-color-danger-light-9: #3a282a;
+  --el-color-danger-dark-2: #c97f85;
 }
 
 html.dark .app-layout .el-input__wrapper,
@@ -469,8 +521,9 @@ html.dark .el-tag {
   color: var(--text-secondary) !important;
 }
 
-html.dark .el-dialog__body,
-html.dark .el-dialog__header {
+/* 暗色下整个对话框统一用卡片底色：
+   只给 header/body 上色会露出 .el-dialog 自身的白底（内边距/页脚处形成白框） */
+html.dark .el-dialog {
   background-color: var(--bg-card) !important;
 }
 

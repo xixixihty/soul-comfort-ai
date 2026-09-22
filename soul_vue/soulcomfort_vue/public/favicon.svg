@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 温暖的太阳/光晕背景 -->
+  <circle cx="16" cy="16" r="14" fill="#FFF3E0" opacity="0.3"/>
+  
+  <!-- 治愈系花朵/心形组合图标 -->
+  <g transform="translate(16, 16)">
+    <!-- 中心心形 -->
+    <path d="M0,-4 C-2,-7 -6,-7 -6,-4 C-6,-1 -2,2 0,5 C2,2 6,-1 6,-4 C6,-7 2,-7 0,-4Z" 
+          fill="#E88B6A" opacity="0.9"/>
+    
+    <!-- 四片花瓣 -->
+    <ellipse cx="0" cy="-8" rx="3" ry="4" fill="#F5C6AA" opacity="0.8" transform="rotate(0)"/>
+    <ellipse cx="8" cy="0" rx="3" ry="4" fill="#F5C6AA" opacity="0.8" transform="rotate(90)"/>
+    <ellipse cx="0" cy="8" rx="3" ry="4" fill="#F5C6AA" opacity="0.8" transform="rotate(180)"/>
+    <ellipse cx="-8" cy="0" rx="3" ry="4" fill="#F5C6AA" opacity="0.8" transform="rotate(270)"/>
+    
+    <!-- 小叶子装饰 -->
+    <path d="M-2,6 Q-4,10 -1,12 Q2,10 0,6Z" fill="#A8D5A2" opacity="0.7"/>
+    <path d="M2,6 Q4,10 1,12 Q-2,10 0,6Z" fill="#A8D5A2" opacity="0.7"/>
+  </g>
+  
+  <!-- 光芒点缀 -->
+  <circle cx="8" cy="8" r="1" fill="#FFD54F" opacity="0.6"/>
+  <circle cx="24" cy="8" r="1" fill="#FFD54F" opacity="0.6"/>
+  <circle cx="8" cy="24" r="1" fill="#FFD54F" opacity="0.6"/>
+  <circle cx="24" cy="24" r="1" fill="#FFD54F" opacity="0.6"/>
+</svg>

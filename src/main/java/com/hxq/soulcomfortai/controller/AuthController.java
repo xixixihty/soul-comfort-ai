@@ -3,11 +3,13 @@ package com.hxq.soulcomfortai.controller;
 import com.hxq.soulcomfortai.dto.ApiResponse;
 import com.hxq.soulcomfortai.dto.request.LoginRequest;
 import com.hxq.soulcomfortai.dto.request.RegisterRequest;
+import com.hxq.soulcomfortai.dto.request.UpdateProfileRequest;
 import com.hxq.soulcomfortai.dto.response.LoginResponse;
 import com.hxq.soulcomfortai.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,5 +42,12 @@ public class AuthController {
     public ApiResponse<LoginResponse.UserInfo> getCurrentUser(
             @RequestAttribute("userId") String userId) {
         return ApiResponse.success(authService.getCurrentUser(userId));
+    }
+
+    @PutMapping("/profile")
+    public ApiResponse<LoginResponse.UserInfo> updateProfile(
+            @RequestAttribute("userId") String userId,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ApiResponse.success(authService.updateProfile(userId, request.getNickname()));
     }
 }

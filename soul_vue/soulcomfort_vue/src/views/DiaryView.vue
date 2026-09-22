@@ -9,7 +9,7 @@
 
     <div class="diary-list" v-loading="loading">
       <div v-if="diaries.length === 0 && !loading" class="empty-state">
-        <el-icon :size="48" color="#d4a373"><Notebook /></el-icon>
+        <el-icon :size="48" color="#e8a9c1"><Notebook /></el-icon>
         <p>还没有写过日记，记录下此刻的心情吧</p>
         <el-button type="primary" @click="$router.push('/diary/write')">写日记</el-button>
       </div>

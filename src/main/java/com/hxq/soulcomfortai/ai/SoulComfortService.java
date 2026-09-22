@@ -25,6 +25,14 @@ public interface SoulComfortService {
     @SystemMessage(fromResource = "prompt/system_prompt.txt")
     String chatForReport(String message);
 
+    /**
+     * 会话标题生成专用：不带甜弈人设系统提示词（人设会让模型回出诗意句子和【情绪】标签，
+     * 导致标题生成"看似调用成功、实则从未产出干净标题"），也不走对话记忆。
+     */
+    @SystemMessage("你是会话标题生成器。根据用户发给陪伴AI的第一条消息，输出一个10字以内、概括其主题的中文标题。"
+            + "只输出标题本身：不要引号、标点、前缀（如“标题：”）、情绪标签或任何解释。")
+    String chatForTitle(@UserMessage String userMessage);
+
 
     record Report(String name, List<String> suggestionList) {}
 
