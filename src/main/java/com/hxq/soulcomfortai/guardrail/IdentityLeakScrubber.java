@@ -84,6 +84,11 @@ public class IdentityLeakScrubber {
         return text == null ? "" : replaceAll(text);
     }
 
+    /** 检测（不替换）：文本是否含身份敏感词。用于标题等"整段判废"场景——替换会把标题改成疯话 */
+    public static boolean containsLeak(String text) {
+        return text != null && !text.isEmpty() && LEAK_PATTERN.matcher(text).find();
+    }
+
     private static String replaceAll(String s) {
         if (s.isEmpty()) {
             return s;

@@ -9,6 +9,7 @@ import com.hxq.soulcomfortai.dto.response.PageResult;
 import com.hxq.soulcomfortai.entity.ChatMessageVO;
 import com.hxq.soulcomfortai.entity.Conversation;
 import com.hxq.soulcomfortai.exception.BusinessException;
+import com.hxq.soulcomfortai.guardrail.IdentityLeakScrubber;
 import com.hxq.soulcomfortai.repository.ConversationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -20,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -167,11 +169,11 @@ public class ConversationService {
             String userMsg = messages.get(0).getContent();
             String title = null;
             try {
-                title = cleanTitle(soulComfortService.chatForTitle(userMsg));
+                title = validateModelTitle(soulComfortService.chatForTitle(userMsg));
             } catch (Exception e) {
                 log.warn("模型生成标题失败，改用首条消息截取兜底 convId={}: {}", convId, e.getMessage());
             }
-            // 确定性兜底：模型失败/输出为空时直接截取用户第一句话，保证标题永不卡在"新对话"
+            // 确定性兜底：模型失败/输出为空/输出判废时直接截取用户第一句话，保证标题永不卡在"新对话"
             if (title == null || title.isBlank()) {
                 title = cleanTitle(userMsg);
             }
@@ -183,6 +185,30 @@ public class ConversationService {
                 log.info("自动生成对话标题 convId={} title={}", convId, title);
             }
         });
+    }
+
+    /** 对话开场信号：模型没在写标题，而是把用户消息当聊天直接作答（自我介绍/问候） */
+    private static final Pattern TITLE_ANSWER_START =
+            Pattern.compile("^(你好|您好|嗨|哈喽|我是|我叫|我会|很高兴|当然)");
+
+    /**
+     * 模型标题验收：只接受"像标题"的输出，否则整段判废、返回 null 走用户原话兜底。
+     * 标题旁路是全项目唯一不经 IdentityLeakScrubber 清洗的落库文本，且对它做词替换只会
+     * 产出"你好，我叫甜弈，是甜弈…"式的疯话，因此正确动作是拒绝而非修饰。
+     */
+    private String validateModelTitle(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String t = raw.replaceAll("【情绪】\\s*\\w+", "").trim();
+        if (t.isEmpty() || t.length() > 24) {
+            return null;
+        }
+        if (TITLE_ANSWER_START.matcher(t).find() || IdentityLeakScrubber.containsLeak(t)) {
+            log.warn("模型标题输出判废（回答体/身份泄露）: {}", t);
+            return null;
+        }
+        return cleanTitle(t);
     }
 
     /** 清洗标题：剥离【情绪】标签、引号/书名框、"标题："前缀与换行，收敛为单行短文本 */
